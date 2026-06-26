@@ -57,6 +57,10 @@ under a WIP limit, and you stay in the loop only where a human decision is neede
   git backup of the board state, deploy-lag detection (pushed but not deployed).
 - **CLI + Skill** — a thin stdlib CLI (`prof_cli.py`) and a Claude Code skill let an agent
   manage the board from inside a session (self-orchestration with near-zero token overhead).
+- **Bilingual UI** — RU/EN toggle in the header; the whole interface translates in place,
+  with the choice persisted in the browser.
+
+![Board — English](docs/screenshots/board-en.png)
 
 ### Architecture
 
@@ -183,6 +187,8 @@ WIP-лимитом, а ты вмешиваешься только там, где
   состояния доски в git, детект «запушено, но не задеплоено».
 - **CLI + Skill** — тонкий stdlib-CLI (`prof_cli.py`) и skill Claude Code позволяют агенту
   управлять доской прямо из сессии (само-оркестрация почти без оверхеда токенов).
+- **Двуязычный UI** — переключатель RU/EN в шапке; весь интерфейс переводится на месте,
+  выбор сохраняется в браузере.
 
 ### Архитектура
 

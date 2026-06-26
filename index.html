@@ -341,6 +341,7 @@ h1,h2,h3,.serif{font-family:'Source Serif 4',Georgia,serif;letter-spacing:-.01em
     </nav>
     <div id="side-usage" class="side-usage"></div>
     <div class="side-foot">
+      <button class="icon-btn" id="lang-btn" title="Язык / Language (RU ↔ EN)">RU</button>
       <button class="icon-btn" id="theme-btn" title="Тема">◐</button>
       <button class="icon-btn" id="tts-btn" title="Голос. вывод">🔈</button>
       <span class="note" id="vec-note" style="cursor:pointer" title="Семантический поиск по памяти — открыть «смысл»-поиск"></span>
@@ -358,6 +359,550 @@ const TOKEN='__PROF_TOKEN__';
 const auth=(o={})=>{o.headers={...(o.headers||{}),'Authorization':'Bearer '+TOKEN};return o;};
 const api=(u,o)=>fetch(u,auth(o)).then(r=>r.json());
 const post=(u,b)=>api(u,{method:'POST',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+
+/* ===================== i18n (RU↔EN) ===================== *
+ * Перевод DOM после рендера по словарю фраз ru→en. RU — исходный язык,
+ * при выборе EN applyI18n() проходит текстовые узлы + title/placeholder и
+ * заменяет известные фразы. Выбор хранится в localStorage('prof_lang'). */
+const I18N_EN={
+  "Предложено":"Proposed",
+  "Подтверждено":"Approved",
+  "В работе":"In progress",
+  "Проверка":"Review",
+  "Готово":"Done",
+  "Отклонено":"Rejected",
+  "💡 Квоту 5h-окна ест в первую очередь cache_read — перечитывание контекста на каждом ходу. Длинная интерактивная сессия раздувает контекст (пик ctx) → каждый следующий ход дороже. Лекарство — /compact в раздутой сессии (prof не может сделать это за интерактивный чат — только подсказать). Задачи-коворкинг роутятся на Sonnet и обычно дают малую долю.":"💡 The 5h-window quota is eaten first of all by cache_read — re-reading the context on every turn. A long interactive session bloats the context (peak ctx) → each next turn is more expensive. The cure is /compact in the bloated session (prof can't do this for an interactive chat — only hint). Coworking tasks are routed to Sonnet and usually contribute a small share.",
+  "Стратегия параллелизма. project — одна задача на проект (защита от гонки записи в файл). worktree — задачи проекта параллельно, каждая в своём git-worktree, результат мерджится в основную ветку (для самого prof worktree отключён → ведёт себя как project). off — без ограничений. Клик — изменить.":"Parallelism strategy. project — one task per project (protection against file-write races). worktree — project tasks run in parallel, each in its own git worktree, the result is merged into the main branch (for prof itself worktree is disabled → behaves like project). off — no limits. Click to change.",
+  "💡 Видны ВСЕ сессии Claude Code, не только prof-задачи. ● зелёная — файл сессии писался < 5 мин назад или агент ждёт ввода. Ветка у активных резолвится живьём (git), у остальных — из лога. $ — реальная работа (вход+выход), без раздутого cache_read.":"💡 ALL Claude Code sessions are shown, not just prof tasks. ● green — the session file was written < 5 min ago or the agent is waiting for input. The branch for active sessions is resolved live (git), for the rest — from the log. $ — real work (input+output), without inflated cache_read.",
+  "💡 Учитываются ВСЕ сессии Claude Code (~/.claude/projects): терминал, IDE, prof. Стоимость — вход+выход (реальная генерация), без раздутого cache_read. Флаг ⚑ — высокий output/сообщение или низкий cache-hit: кандидаты на оптимизацию промптов.":"💡 ALL Claude Code sessions (~/.claude/projects) are counted: terminal, IDE, prof. Cost is input+output (real generation), without inflated cache_read. Flag ⚑ — high output/message or low cache-hit: candidates for prompt optimization.",
+  "💡 Оптимизация: основная экономия — в кэше (cache-read дешевле обычного входа в ~10×). Длинные prompt и частые мелкие задачи на одном проекте переиспользуют кэш. Дроби крупные задачи на одной доске — кэш проекта греется.":"💡 Optimization: the main saving is in the cache (cache-read is ~10× cheaper than regular input). Long prompts and frequent small tasks on one project reuse the cache. Split large tasks on one board — the project cache stays warm.",
+  "💡 На какой модели гонялась каждая задача (авто-роутинг). Opus жжёт 5h-окно подписки в ~5× быстрее Sonnet — тяжёлый код стоит на Opus, ревью/анализ роутятся на Sonnet.":"💡 Which model each task ran on (auto-routing). Opus burns the subscription's 5h window ~5× faster than Sonnet — heavy code stays on Opus, reviews/analysis are routed to Sonnet.",
+  "Задача выполнена в своём git-worktree, но при мердже ветки prof-card-N в основную возник конфликт. Работа сохранена (ветка и worktree на месте) — домерджи вручную.":"The task was completed in its own git worktree, but merging branch prof-card-N into the main branch caused a conflict. The work is saved (branch and worktree are intact) — merge it manually.",
+  "Задача раздулась, а 5h-окно почти исчерпано — поставлена на паузу, чтобы не уронить соседей в session-limit. Доделается автоматически (--resume) в следующем окне.":"The task ballooned and the 5h window is nearly exhausted — it was paused so it won't push neighbors into the session limit. It will finish automatically (--resume) in the next window.",
+  "Проверять, что задача реально выкачена: при rc=0 и зелёных тестах, но без нового коммита, карточка уходит в «не выкачено» (🚧), а не в «Готово». Клик — вкл/выкл.":"Check that the task is actually deployed: with rc=0 and green tests but no new commit, the card goes to \"not deployed\" (🚧) instead of \"Done\". Click to toggle on/off.",
+  "Агент прочитает файлы и тесты задачи, проверит по факту, выполнена ли она, и перенесёт в «Готово» либо вернёт на доработку.<br><br>~1-3 мин, расходует токены.":"The agent will read the task's files and tests, verify in fact whether it's done, and move it to \"Done\" or send it back for rework.<br><br>~1-3 min, consumes tokens.",
+  "Подхватить свежий код с диска (uvicorn reload). Веб-воркер пересоздастся за ~1-2с, claude-задачи переживут. Применять лучше, когда нет активных задач.":"Pick up fresh code from disk (uvicorn reload). The web worker is recreated in ~1-2s, claude tasks survive. Best applied when there are no active tasks.",
+  "Лимит одновременно бегущих задач (WIP, по всем доскам). Достигнут — новые встают в очередь и стартуют автоматически. Клик — изменить.":"Limit of simultaneously running tasks (WIP, across all boards). When reached, new ones are queued and start automatically. Click to change.",
+  "Агент прочитает проект и память, найдёт техдолг/риски/TODO и предложит задачи в колонку «Предложено» — ты подтвердишь или отклонишь.":"The agent will read the project and memory, find tech debt/risks/TODOs and suggest tasks in the \"Proposed\" column — you'll approve or reject them.",
+  "💡 На подписке Opus съедает 5h-окно в ~5× быстрее Sonnet — роутинг переносит ревью/анализ на Sonnet, оставляя Opus для сложного кода.":"💡 On the subscription Opus eats the 5h window ~5× faster than Sonnet — routing moves reviews/analysis to Sonnet, leaving Opus for complex code.",
+  "Задачи одного проекта строго последовательно. Защита от гонки записи в общий файл. Разные проекты — параллельно. (рекомендуется)":"Tasks of the same project run strictly sequentially. Protection against races writing to a shared file. Different projects run in parallel. (recommended)",
+  "Консоль = ручная работа в Claude Code по этому проекту (не через prof). Считается из live-сессий ~/.claude/projects за 7 дней.":"Console = manual work in Claude Code on this project (not via prof). Computed from live ~/.claude/projects sessions over 7 days.",
+  "Агент отрапортовал готово, но сам признал, что результат не выкачен/не закоммичен — на прод/тест не попадёт. Нужна доработка.":"The agent reported done but admitted the result isn't deployed/committed — it won't reach prod/test. Needs more work.",
+  "Агент прочитает проект и память, найдёт техдолг/риски/TODO и предложит задачи.<br><br>~1-3 мин, расходует токены.":"The agent will read the project and memory, find tech debt/risks/TODOs and suggest tasks.<br><br>~1-3 min, consumes tokens.",
+  "Доступ/права есть, всё разрешено (--dangerously-skip-permissions). Повтори операцию, не спрашивая подтверждений.":"Access/permissions are granted, everything is allowed (--dangerously-skip-permissions). Retry the operation without asking for confirmation.",
+  "Впиши решение/ответ сейчас — агент учтёт его и доделает в назначенное окно (продолжит, не с нуля).":"Enter your decision/answer now — the agent will take it into account and finish in the scheduled window (continuing, not from scratch).",
+  "Задача будет подтверждена и запущена агентом в папке проекта.<br><br>~1-3 мин, расходует токены.":"The task will be approved and run by the agent in the project folder.<br><br>~1-3 min, consumes tokens.",
+  "Достигнут WIP-лимит — задача в очереди, стартует автоматически, как только освободится слот":"WIP limit reached — the task is queued and starts automatically as soon as a slot frees up",
+  "Пока нет задач с учётом токенов. Запусти задачу — после выполнения здесь появятся затраты.":"No tasks with token accounting yet. Run a task — costs will appear here after it completes.",
+  "Привяжи папку как проект: prof считает README и структуру в базу и создаст доску канбан.":"Link a folder as a project: prof reads the README and structure into the database and creates a kanban board.",
+  "Реши на своё усмотрение наиболее разумным образом и доведи до конца, не переспрашивая.":"Decide at your own discretion in the most reasonable way and see it through without asking again.",
+  "Запустит headless claude (~1-3 мин). Можно закрыть окно — результат появится на доске.":"Will launch headless claude (~1-3 min). You can close the window — the result will appear on the board.",
+  "Ручная работа в Claude Code по проекту (терминал/IDE, не через prof) за 7 дней":"Manual work in Claude Code on the project (terminal/IDE, not via prof) over 7 days",
+  "Можно закрыть это окно — анализ продолжится в фоне, задачи появятся на доске.":"You can close this window — the analysis will continue in the background, tasks will appear on the board.",
+  "Подхватить свежий код на диске без полного рестарта (claude-задачи переживут)":"Pick up fresh code on disk without a full restart (claude tasks survive)",
+  "Не запускай тесты/проверки сам — просто внеси изменения, я проверю отдельно.":"Don't run tests/checks yourself — just make the changes, I'll verify separately.",
+  "пик контекста = cache_read+create в одном ходу; большой → каждый ход дорогой":"context peak = cache_read+create in one turn; large → every turn is expensive",
+  "Любые задачи параллельно (только WIP-лимит). Риск гонки записи в один файл.":"Any tasks run in parallel (only the WIP limit applies). Risk of races writing to a single file.",
+  "Пропусти этот шаг и продолжи с остальным. Что не вышло — отметь в отчёте.":"Skip this step and continue with the rest. Note in the report whatever didn't work out.",
+  "Задача запустится автоматически в указанное время при свободном слоте":"The task will start automatically at the specified time when a slot is free",
+  "Комментарий предзаполнен вердиктом ревьюера — дополни или перепиши.":"The comment is prefilled with the reviewer's verdict — add to it or rewrite it.",
+  "Отложить до след. окна: впиши решение сейчас, агент доделает позже":"Defer to the next window: enter the decision now, the agent will finish later",
+  "Запустить позже — в начале следующего периода или в заданное время":"Run later — at the start of the next period or at a set time",
+  "Впиши решение сейчас, агент доделает в следующем окне (продолжит)":"Enter your decision now, the agent will finish in the next window (continuing)",
+  "живые сессии Claude Code (терминал, IDE, prof) — обзор, не канбан":"live Claude Code sessions (terminal, IDE, prof) — overview, not kanban",
+  "Задание агенту — уточни/исправь реализацию (🎙 можно надиктовать)":"Task for the agent — refine/fix the implementation (🎙 you can dictate)",
+  "Отложенный старт — запустится автоматически в назначенное время":"Delayed start — will run automatically at the appointed time",
+  "Нет активных сессий (нет правок в ~/.claude/projects за 5 мин).":"No active sessions (no edits in ~/.claude/projects in the last 5 min).",
+  "✓ Раздутых интерактивных сессий нет — квота расходуется ровно.":"✓ No bloated interactive sessions — the quota is being spent evenly.",
+  "Агент проверит, выполнена ли задача → Готово или на доработку":"The agent will check whether the task is done → Done or send it back for rework",
+  "напр.: пароль такой-то / пропусти этот шаг / делай вариант A…":"e.g.: the password is X / skip this step / go with option A…",
+  "Доля нагрузки на 5h-окно: интерактивные сессии vs задачи prof":"Share of load on the 5h window: interactive sessions vs prof tasks",
+  "Сколько задач может бежать одновременно (рекомендуется 3-5):":"How many tasks can run simultaneously (3-5 recommended):",
+  "Агент задал вопрос или не смог проверить — нужен твой ответ":"The agent asked a question or couldn't verify — your answer is needed",
+  "Твой ответ агенту (можно выбрать кнопкой выше и дополнить)…":"Your answer to the agent (you can pick one with a button above and add to it)…",
+  "Агент доделает задачу с учётом уже сделанного (не с нуля).":"The agent will finish the task taking into account what's already done (not from scratch).",
+  ", но на сервере его ещё нет. Изменения не у пользователей.":", but it's not on the server yet. The changes aren't live for users.",
+  "— вдвое выше медианы, длинные ответы дороги (×5 от входа)":"— twice above the median, long responses are expensive (×5 of input)",
+  "Отложить старт — подтвердит и запустит в заданное время":"Delay start — will confirm and run at the set time",
+  "весь расход Claude Code за период (терминал, IDE, prof)":"all Claude Code spend over the period (terminal, IDE, prof)",
+  "Семантический поиск по памяти — открыть «смысл»-поиск":"Semantic search over memory — open meaning-based search",
+  "Задача будет перезапущена с нуля по текущему заданию.":"The task will be restarted from scratch with the current instructions.",
+  "Да, подтверждаю — действуй по своему плану, разрешаю.":"Yes, confirmed — proceed with your plan, you have my permission.",
+  "env PROF_TG_BOT_TOKEN/PROF_TG_CHAT_ID имеют приоритет":"env PROF_TG_BOT_TOKEN/PROF_TG_CHAT_ID take priority",
+  "Нет досок. Создай задачу или запусти анализ проекта.":"No boards. Create a task or run a project analysis.",
+  "Агент проверит файлы/тесты → Готово или на доработку":"The agent will check files/tests → Done or rework",
+  "Агент доделает задачу с учётом комментария ревьюера.":"The agent will finish the task taking the reviewer's comment into account.",
+  "✏️ Комментарий к доработке (предзаполнен вердиктом)":"✏️ Rework comment (prefilled with the verdict)",
+  "в терминале; здесь отображается статус подключения.":"in the terminal; connection status is shown here.",
+  "кто жрёт квоту 5h-окна: наш чат vs задачи-коворкинг":"who eats the 5h-window quota: our chat vs coworking tasks",
+  "Opus съедает 5h-окно подписки в ~5× быстрее Sonnet":"Opus eats the subscription's 5h window ~5× faster than Sonnet",
+  "Активных задач нет, бэкап сделается автоматически.":"No active tasks, a backup will be made automatically.",
+  "Агент остановился и ждёт твоего ответа/разрешения":"The agent has stopped and is waiting for your answer/permission",
+  "Задача будет запущена заново по текущему заданию.":"The task will be re-run with the current instructions.",
+  "Не делай это. Останови задачу, оставь как есть.":"Don't do this. Stop the task, leave it as is.",
+  "Нет сервисов. Добавь URL прода для мониторинга.":"No services. Add a production URL to monitor.",
+  "Контекст раздут — сделай /compact в этой сессии":"Context is bloated — run /compact in this session",
+  "Перезапуск ПРЕРВЁТ их. Всё равно перезапустить?":"A restart will INTERRUPT them. Restart anyway?",
+  "задач без метки модели (запуски до роутинга).":"tasks without a model label (runs before routing).",
+  "Доделать с учётом уже сделанного (не с нуля)":"Finish taking into account what's already done (not from scratch)",
+  "Что сделать. Агент выполнит в папке проекта.":"What to do. The agent will carry it out in the project folder.",
+  "задачи · агент предлагает, ты подтверждаешь":"tasks · the agent proposes, you confirm",
+  "Твоё решение / ответ агенту (необязательно)":"Your decision / answer to the agent (optional)",
+  "Агент читает проект. Это займёт до 3 минут.":"The agent is reading the project. This will take up to 3 minutes.",
+  "Команда проверки прод-HEAD вернула ошибку:":"The prod-HEAD check command returned an error:",
+  "— низкий, контекст перечитывается без кэша":"— low, context is re-read without cache",
+  "Прервано при перезапуске — запусти заново":"Interrupted on restart — run it again",
+  "токены и стоимость по выполненным задачам":"tokens and cost by completed tasks",
+  "Нет активных сессий за последние 5 часов.":"No active sessions in the last 5 hours.",
+  "агент работает — живой вывод из консоли:":"agent is working — live console output:",
+  "Отправить агента доделывать прямо сейчас":"Send the agent to finish right now",
+  "Нет отложенных задач (status=scheduled).":"No deferred tasks (status=scheduled).",
+  "— к нему привязывается отложенный старт.":"— deferred starts are tied to it.",
+  "Сессии за 5ч-окно (по нагрузке на квоту)":"Sessions in the 5h window (by quota load)",
+  "В начале следующего 5h-периода (+5 мин)":"At the start of the next 5h period (+5 min)",
+  "❓ Агент ждёт ответа — ответь и продолжи":"❓ Agent is awaiting a reply — answer and continue",
+  "Напиши ответ или выбери вариант кнопкой":"Write an answer or pick an option with a button",
+  "Агент продолжит с учётом твоего ответа.":"The agent will continue taking your answer into account.",
+  "всё, что в prof работает по времени · v":"everything in prof that runs on a schedule · v",
+  "Очередь пуста — все слоты WIP свободны.":"Queue is empty — all WIP slots are free.",
+  "Токены консольных сессий (вход / выход)":"Console session tokens (input / output)",
+  "). Страница обновится через 4 секунды.":"). The page will refresh in 4 seconds.",
+  "(раздут, на подписке не деньги). Вход":" (inflated, not real money on a subscription). Input ",
+  "на неизвестном коммите (не из origin)":"on an unknown commit (not from origin)",
+  "маркеры «Осталось / ЖДёт / НЕ начато»":"markers \"Remaining / Waiting / Not started\"",
+  "Лимиты недоступны (нет токена usage).":"Limits unavailable (no usage token).",
+  "всего токенов за окно — это ест квоту":"total tokens in the window — this eats the quota",
+  "Как запускать задачи одного проекта:":"How to run tasks of the same project:",
+  "Задание агенту (🎙 можно надиктовать)":"Task for the agent (🎙 you can dictate)",
+  ". Обнови страницу через пару секунд.":". Refresh the page in a couple of seconds.",
+  "% (5ч), запуск может не завершиться":"% left (5h), the run may not finish",
+  "Стоимость агентных проверок (ревью)":"Cost of agent reviews",
+  "Opus жжёт окно в ~5× быстрее Sonnet":"Opus burns the window ~5× faster than Sonnet",
+  "⚠ Авто-проверка: нужна доработка":"⚠ Auto-check: rework needed",
+  "Obsidian vault (для синка задач)":"Obsidian vault (for task sync)",
+  "Нет команд в ~/.claude/commands":"No commands in ~/.claude/commands",
+  "Что доработать (получит агент)":"What to rework (the agent will receive this)",
+  "— продолжит с учётом доработки":"— will continue taking the rework into account",
+  "Анализ готов: предложено задач":"Analysis ready: tasks suggested",
+  "что подключено и умеет система":"what is connected and what the system can do",
+  "сразу подтвердить и запустить":"approve and run immediately",
+  "Добавлять/удалять MCP — через":"Add/remove MCP — via",
+  "Отправлено — проверь Telegram":"Sent — check Telegram",
+  "средней задаче этого проекта":"the average task of this project",
+  "— продолжит с учётом решения":"— will continue taking the decision into account",
+  "Доделает в следующем 5h-окне":"Will finish in the next 5h window",
+  "» — возвращена на доработку.":"\" — returned for rework.",
+  "uptime-пинг + аудит → задачи":"uptime ping + audit → tasks",
+  "доля cache_read — выше лучше":"cache_read share — higher is better",
+  "~1-3 мин, расходует токены.":"~1-3 min, consumes tokens.",
+  "будут удалены безвозвратно.":"will be permanently deleted.",
+  "Следующее 5h-окно откроется":"The next 5h window opens",
+  "✓ Авто-проверка: выполнено":"✓ Auto-check: passed",
+  "» — перенесена в «Готово».":"\" — moved to \"Done\".",
+  "Синхронизирую все проекты…":"Syncing all projects…",
+  "Проверка выкатки выключена":"Deployment check disabled",
+  "Расход по моделям (задачи)":"Spend by model (tasks)",
+  "Раздутая сессия жрёт квоту":"A bloated session is eating the quota",
+  "Обновлено (git не найден)":"Updated (git not found)",
+  "Проверка выкатки включена":"Deployment check enabled",
+  "Не удалось проверить прод":"Failed to check prod",
+  "» привязан, доска создана":"\" linked, board created",
+  "У сервиса не задан проект":"No project set for this service",
+  "текущий лимитный интервал":"current rate-limit interval",
+  "авто-коммит каждые 10 мин":"auto-commit every 10 min",
+  "Не удалось перезапустить:":"Failed to restart: ",
+  "средней по всем проектам":"the average across all projects",
+  "⏳ Запланированные задачи":"⏳ Scheduled tasks",
+  "Интерактив (чат/консоль)":"Interactive (chat/console)",
+  "— reaper перезапустится)":" — reaper will restart)",
+  "Озвучка вкл — клик выкл":"Voice on — click to turn off",
+  "Озвучка выкл — клик вкл":"Voice off — click to turn on",
+  "Подтвердить → запустить":"Confirm → run",
+  "Открыть / редактировать":"Open / edit",
+  "⏰ Отложить «доделать» #":"⏰ Delay \"finish\" #",
+  "↩ Ответить и продолжить":"↩ Answer and continue",
+  "🔓 Доступ есть — повтори":"🔓 Access granted — retry",
+  "— или укажи путь ниже —":"— or specify a path below —",
+  "всего (по всем доскам)":" total (across all boards)",
+  "Снять отложенный старт":"Cancel delayed start",
+  ". Из очереди запущено:":". Started from queue: ",
+  ", запущено из очереди:":", started from queue: ",
+  "Сервис перезапускается":"The service is restarting",
+  "Нужно целое число ≥ 1":"An integer ≥ 1 is required",
+  "Отложенный старт снят":"Delayed start cancelled",
+  "▶ На доработку сейчас":"▶ Rework now",
+  "⏰ Отложить (доделать)":"⏰ Delay (finish)",
+  "Анализ не запустился:":"Analysis didn't start: ",
+  "Открой доску проекта.":"Open the project board.",
+  "↻ Регулярные процессы":"↻ Recurring processes",
+  "Нет сессий за период.":"No sessions for the period.",
+  "↻ Перезапустить prof?":"↻ Restart prof?",
+  "✦ Анализ слабых мест":"✦ Weak-spot analysis",
+  "⏸️ пауза (раздулась)":"⏸️ paused (ballooned)",
+  "Git-worktree + мердж":"Git worktree + merge",
+  "⏰ Отложить доработку":"⏰ Delay rework",
+  "✅ Подтверждаю, делай":"✅ Confirmed, go ahead",
+  "✋ Останови, не нужно":"✋ Stop, not needed",
+  "Редактировать сервис":"Edit service",
+  "хорошо — кэш греется":"good — cache is warming up",
+  "Нет данных за период":"No data for the period",
+  "↻ Перезапустить prof":"↻ Restart prof",
+  "Telegram-уведомления":"Telegram notifications",
+  "валидация не прошла":"validation failed",
+  "⛓ Параллелизм задач":"⛓ Task parallelism",
+  "Всё равно запустить":"Run anyway",
+  "⏭ Пропусти этот шаг":"⏭ Skip this step",
+  "🧪 Тесты не запускай":"🧪 Don't run tests",
+  "🔍 Агентная проверка":"🔍 Agent review",
+  "🔍 Проверка запущена":"🔍 Review started",
+  "✓ Проверка пройдена":"✓ Review passed",
+  "Переименовать доску":"Rename board",
+  "🚧 Проверять выкатку":"🚧 Check deployment",
+  "Проект (для аудита)":"Project (for audit)",
+  "вход / выход токены":"input / output tokens",
+  "валидация пройдена":"validation passed",
+  "1 задача на проект":"1 task per project",
+  "В конкретное время":"At a specific time",
+  "Сессий не найдено.":"No sessions found.",
+  "Всего по проекту $":"Total per project $",
+  "Сейчас выполняется":"Currently running",
+  "⚠️ Активные задачи":"⚠️ Active tasks",
+  "⚠ конфликт мерджа":"⚠ merge conflict",
+  "Неверное значение":"Invalid value",
+  "Предложено задач:":"Tasks suggested:",
+  "Ничего не найдено":"Nothing found",
+  "↻ Пересканировать":"↻ Rescan",
+  "Хуки не настроены":"No hooks configured",
+  "⬆ дорогой по окну":"⬆ window-expensive",
+  "Расход по моделям":"Spend by model",
+  "Отложенный старт":"Delayed start",
+  "⏰ Отложить старт":"⏰ Delay start",
+  "Старт отложен на":"Start delayed until",
+  "⏰✕ Снять отложку":"⏰✕ Cancel delay",
+  "Ошибка проверки:":"Review error: ",
+  "✏️ Переименовать":"✏️ Rename",
+  "Запустить анализ":"Run analysis",
+  "поиск по памяти…":"search memory…",
+  "Нельзя проверить":"Cannot check",
+  "Нет MCP-серверов":"No MCP servers",
+  "В консоли токены":"Console tokens",
+  "Задачи-коворкинг":"Coworking tasks",
+  "лимит недоступен":"limit unavailable",
+  "сообщений в окне":"messages in the window",
+  "полный API-экв ≈":"full API equiv ≈",
+  "⚑ оптимизировать":"⚑ optimize",
+  "История коммитов":"Commit history",
+  "(активных задач:":"(active tasks: ",
+  "(прервано задач:":"(tasks interrupted: ",
+  "Остановить звук":"Stop sound",
+  "↻ Перепроверить":"↻ Recheck",
+  "Без ограничений":"No limits",
+  "▶ Запуск задачи":"▶ Run task",
+  "🗑 Удалить доску":"🗑 Delete board",
+  "Обновлено. Git:":"Updated. Git: ",
+  "Пересканировано":"Rescanned",
+  "Интеграции prof":"prof integrations",
+  "доля cache_read":"cache_read share",
+  "⚡ Лимитные окна":"⚡ Rate-limit windows",
+  "Всего потрачено":"Total spent",
+  "токенов за окно":"tokens in the window",
+  "Доля cache-read":"Cache-read share",
+  "доля от периода":"share of the period",
+  "⟳ Применить код":"⟳ Apply code",
+  "Remote добавлен":"Remote added",
+  "Отложить старт":"Delay start",
+  "Голосовой ввод":"Voice input",
+  "планировали ≈$":"planned ≈$",
+  "Удалить доску?":"Delete board?",
+  "⏳ выполняется…":"⏳ running…",
+  "Проверяю прод…":"Checking prod…",
+  "TODO из памяти":"TODOs from memory",
+  "Нет сабагентов":"No subagents",
+  "задач с учётом":"tasks accounted",
+  "Средняя задача":"Avg task",
+  "агентные ревью":"agent reviews",
+  "Окно сбросится":"Window resets in",
+  "Расход по дням":"Spend by day",
+  "⬆ Бэкап сейчас":"⬆ Backup now",
+  "Не отправлено:":"Not sent: ",
+  "🚧 не выкачено":"🚧 not deployed",
+  "❓ нужен ответ":"❓ answer needed",
+  "⛓ Параллелизм":"⛓ Parallelism",
+  "🔍 На проверку":"🔍 Review",
+  "✗ Не пройдена":"✗ Not passed",
+  "✦ Анализирую…":"✦ Analyzing…",
+  "Синхронизация":"Sync",
+  "Код запушен в":"Code is pushed to",
+  "не проверялся":"not checked",
+  "Редактировать":"Edit",
+  "Slash-команды":"Slash commands",
+  "по требованию":"on demand",
+  "Токенов всего":"Total tokens",
+  "пик контекста":"context peak",
+  "Токенов за 5ч":"Tokens in 5h",
+  "Нет изменений":"No changes",
+  "Перезапустить":"Restart",
+  "↻ Перезапуск…":"↻ Restarting…",
+  "Подтверждение":"Confirmation",
+  "Голос. вывод":"Voice output",
+  "через <1 мин":"in <1 min",
+  "предложено ·":" proposed · ",
+  "⏳ ждёт ввода":"⏳ waiting for input ",
+  "· кэш-чтение":" · cache read ",
+  "▶ Продолжить":"▶ Continue",
+  "фактически $":"actual $",
+  "На доработку":"Rework",
+  "Новая задача":"New task",
+  "↻ Синхр. все":"↻ Sync all",
+  "git найден у":"git found in",
+  "Новый проект":"New project",
+  "Новый сервис":"New service",
+  "Посл. запуск":"Last run",
+  "output/сообщ":"output/msg",
+  "аномалий нет":"no anomalies",
+  "вход / выход":"input / output",
+  "↓ / ↑ токены":"↓ / ↑ tokens",
+  "Нет коммитов":"No commits",
+  "Код применён":"Code applied",
+  "Git / бэкап":"Git / backup",
+  "1 на проект":"1 per project",
+  "на проверке":"in review",
+  "сброс через":"reset in ",
+  "· сообщений":" · messages ",
+  "✗ валидация":"✗ validation",
+  "Валидация —":"Validation — ",
+  "✓ проверена":"✓ reviewed",
+  "⚠ доработка":"⚠ needs work",
+  "остановлено":"stopped",
+  "⏳ в очереди":"⏳ queued",
+  "⚙ WIP-лимит":"⚙ WIP limit",
+  "Укажи время":"Specify a time",
+  "Нужно время":"Time required",
+  "ждёт ответа":"awaiting reply",
+  "отложена на":"delayed until",
+  "✓ Завершить":"✓ Complete",
+  "💾 Сохранить":"💾 Save",
+  "Нужен ответ":"Answer required",
+  "Новая доска":"New board",
+  "— задеплой!":"— deploy it!",
+  "Укажи папку":"Specify a folder",
+  "⟳ Пинг всех":"⟳ Ping all",
+  "MCP-серверы":"MCP servers",
+  "▦ В очереди":"▦ Queued",
+  "В очереди с":"Queued since",
+  "prof-задачи":"prof tasks",
+  "На проверки":"On reviews",
+  "По проектам":"By project",
+  "В консоли $":"In console $",
+  "чат/консоль":"chat/console",
+  "можно лучше":"could be better",
+  "$ за период":"$ per period",
+  "Закоммичено":"Committed",
+  "Не удалось:":"Failed: ",
+  "Активность":"Activity",
+  "Расписание":"Schedule",
+  "только что":"just now",
+  "⚙ В работе":"⚙ In progress ",
+  "предложено":"proposed",
+  "в работе ·":" running · ",
+  "(лог пуст)":"(log empty)",
+  "⏸ прервано":"⏸ interrupted",
+  "⏰ отложено":"⏰ scheduled",
+  "(оценка по":"(estimate based on ",
+  "не удалось":"failed",
+  "⏰ Отложено":"⏰ Delayed",
+  "⏰ Отложить":"⏰ Delay",
+  "Продолжить":"Continue",
+  "🤔 Реши сам":"🤔 Decide yourself",
+  "Проверяю «":"Reviewing \"",
+  "отстаёт на":"is behind by",
+  "Папка из ~":"Folder from ~",
+  "✓ доступно":"✓ available",
+  "Нет скилов":"No skills",
+  "● активные":"● active",
+  "⟳ Обновить":"⟳ Refresh",
+  "нет данных":"no data",
+  "⛁ Квота 5ч":"⛁ 5h quota",
+  "все сессии":"all sessions",
+  "Проверки $":"Reviews $",
+  "утилизация":"utilization",
+  "Интерактив":"Interactive",
+  "с флагом ⚑":"flagged ⚑",
+  "и запушено":" and pushed",
+  "в очереди":"queued",
+  "Отклонить":"Reject",
+  "Сохранить":"Save",
+  "Заголовок":"Title",
+  "Результат":"Result",
+  "Проверить":"Review",
+  "← Проекты":"← Projects",
+  "Обновлено":"Updated",
+  "Сканирую…":"Scanning…",
+  "Свой путь":"Custom path",
+  "Сабагенты":"Subagents",
+  "неактивна":"inactive",
+  "Выполнено":"Completed",
+  "с ошибкой":"failed",
+  "% выбрано":"% used",
+  "🔴 раздута":"🔴 bloated",
+  "$ за день":"$ per day",
+  "сохранить":"save",
+  "Сохранено":"Saved",
+  "Применить":"Apply",
+  "+ Задача":"+ Task",
+  "без лока":"no lock",
+  "в работе":"running",
+  "Действия":"Actions",
+  "% лимита":"% of limit",
+  "✓ готово":"✓ done",
+  "Отложить":"Delay",
+  "✕ Ошибка":"✕ Error",
+  "↻ С нуля":"↻ From scratch",
+  "▶ Запуск":"▶ Run",
+  "Ответить":"Answer",
+  "Название":"Name",
+  "Свернуть":"Minimize",
+  "✦ Анализ":"✦ Analysis",
+  "+ Проект":"+ Project",
+  "⚡ Задача":"⚡ Task",
+  "Проект «":"Project \"",
+  "✦ Проект":"✦ Project",
+  "+ Сервис":"+ Service",
+  "Добавить":"Add",
+  "активных":"active",
+  "Интервал":"Interval",
+  "Задачи $":"Tasks $",
+  "Всего за":"Total over",
+  "Проектов":"Projects",
+  "векторов":"vectors",
+  "Проекты":"Projects",
+  "Сервисы":"Services",
+  "Затраты":"Costs",
+  "+ доска":"+ board",
+  "· выход":" · output ",
+  "✓ тесты":"✓ tests",
+  "Закрыть":"Close",
+  "⏰ старт":"⏰ start ",
+  "токенов":" tokens",
+  "Удалить":"Delete",
+  "Статус:":"Status:",
+  "⏰ Снято":"⏰ Cancelled",
+  "Создать":"Create",
+  "К доске":"To board",
+  "памяток":"memos",
+  "Ошибка:":"Error: ",
+  "активна":"active",
+  "Процесс":"Process",
+  "расхода":"of spend",
+  "Пик ctx":"Peak ctx",
+  "Окно 5ч":"5h window",
+  "Токенов":"Tokens",
+  "досок →":"boards →",
+  "Канбан":"Kanban",
+  "Навыки":"Skills",
+  "Сессии":"Sessions",
+  "сейчас":"now",
+  "готово":"done",
+  "ошибка":"error",
+  "Отмена":"Cancel",
+  "Режим:":"Mode: ",
+  "■ Стоп":"■ Stop",
+  "С нуля":"From scratch",
+  "Проект":"Project",
+  "Задача":"Task",
+  "Готово":"Done",
+  ": выкл":": off",
+  "✦ фикс":"✦ fix",
+  "Сообщ.":"Msgs",
+  "сессия":"session",
+  "задача":"task",
+  "сессий":"sessions",
+  "Задачи":"Tasks",
+  "Сессия":"Session",
+  "Модель":"Model",
+  "Токены":"Tokens",
+  "Ошибка":"Error",
+  "задач:":"tasks:",
+  "всего":"total",
+  "Лимит":"Limit ",
+  "Доска":"Board",
+  "текст":"text",
+  "смысл":"meaning",
+  "ветка":"branch",
+  ": вкл":": on",
+  "Скилы":"Skills",
+  "Ветка":"Branch",
+  "Старт":"Start",
+  "Когда":"When",
+  "назад":"ago",
+  "След.":"Next",
+  "выход":"output",
+  "Задач":"Tasks",
+  "задач":"tasks",
+  "сообщ":"msgs",
+  "сесс.":"sess.",
+  "⬆ пик":"⬆ peak",
+  "Синк:":"Sync:",
+  "Тема":"Theme",
+  "вход":"input ",
+  "идёт":"running",
+  "Прод":"Prod",
+  "пинг":"ping",
+  "Хуки":"Hooks",
+  "окно":"window",
+  "Дата":"Date",
+  "доля":"share",
+  "синк":"sync",
+  "Тест":"Test",
+  "Ввод":"Input",
+  "нет":"no",
+  "все":"all",
+  "Где":"Where",
+  "Тип":"Type",
+  "КБ":"KB"
+};// фразы, отсортированные по убыванию длины — длинные заменяем первыми (подстроки)
+const I18N_KEYS=Object.keys(I18N_EN).sort((a,b)=>b.length-a.length);
+let LANG=localStorage.getItem('prof_lang')||'ru';
+const hasCyr=s=>/[А-Яа-яЁё]/.test(s);
+// перевод одной строки: точное совпадение (trim) → иначе подстрочная замена фраз
+function trStr(s){
+  if(!s||!hasCyr(s))return s;
+  const t=s.trim();
+  if(I18N_EN[t]){return s.replace(t,I18N_EN[t]);}
+  let out=s;
+  for(const k of I18N_KEYS){if(out.includes(k))out=out.split(k).join(I18N_EN[k]);}
+  return out;
+}
+// обход DOM: текстовые узлы + атрибуты title/placeholder. Идемпотентно (data-i18n-done).
+function applyI18n(root){
+  if(LANG!=='en'||!root)return;
+  const tw=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null);
+  const nodes=[];for(let n=tw.nextNode();n;n=tw.nextNode())nodes.push(n);
+  for(const n of nodes){
+    if(n.parentNode&&(n.parentNode.tagName==='SCRIPT'||n.parentNode.tagName==='STYLE'))continue;
+    if(hasCyr(n.nodeValue)){const v=trStr(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v;}
+  }
+  const els=root.querySelectorAll('[title],[placeholder]');
+  for(const el of els){
+    for(const a of ['title','placeholder']){
+      const v=el.getAttribute(a);
+      if(v&&hasCyr(v)){const nv=trStr(v);if(nv!==v)el.setAttribute(a,nv);}
+    }
+  }
+}
+// перевести весь видимый UI разом (шапка + текущая вьюха + открытые модалки)
+function applyI18nAll(){applyI18n(document.body);}
+// переключатель языка: persist + перерисовка (RU требует перезагрузки — текст в DOM уже заменён на EN)
+function setLang(l){
+  localStorage.setItem('prof_lang',l);
+  if(l===LANG){return;}
+  LANG=l;
+  updateLangBtn();
+  if(l==='en'){applyI18nAll();render&&render();setTimeout(applyI18nAll,50);}
+  else{location.reload();}  // обратно на RU — проще перезагрузить исходную разметку
+}
+function updateLangBtn(){const b=document.getElementById('lang-btn');if(b)b.textContent=LANG==='en'?'EN':'RU';}
+
 // Защита от двойного клика: блокирует кнопку (event.currentTarget) на время промиса fn().
 async function guard(fn){const btn=window.event&&window.event.currentTarget;
   if(btn){if(btn.disabled)return;btn.disabled=true;btn.style.opacity='.5';}
@@ -467,6 +1012,7 @@ async function render(){const m=$('#main');
   else if(S.view==='kb')await viewKb(m);
   else if(S.view==='cost')await viewCost(m);
   else if(S.view==='git')await viewGit(m);
+  applyI18n(m);
 }
 
 /* ===================== КАНБАН ===================== */
@@ -1710,7 +2256,7 @@ async function restartProf(){
 }
 
 /* ---- модалка ---- */
-function showModal(h,wide){$('#modal').classList.toggle('wide',!!wide);$('#modal').innerHTML='<button class="modal-x" title="Закрыть" onclick="closeModal()">×</button>'+h;$('#overlay').classList.add('show');hl($('#modal'));}
+function showModal(h,wide){$('#modal').classList.toggle('wide',!!wide);$('#modal').innerHTML='<button class="modal-x" title="Закрыть" onclick="closeModal()">×</button>'+h;$('#overlay').classList.add('show');hl($('#modal'));applyI18n($('#modal'));}
 function closeModal(){$('#overlay').classList.remove('show');S.openCardId=null;stopSpeak();}
 /* модалки закрываются только по кнопкам — клик по фону и Escape не закрывают,
    чтобы мисклики/выделение текста не теряли введённое */
@@ -1727,6 +2273,7 @@ function toast(msg,{title='',type='info',timeout=6000}={}){
   const close=()=>{el.classList.add('out');setTimeout(()=>el.remove(),200);};
   el.querySelector('.t-x').onclick=close;
   c.appendChild(el);
+  applyI18n(el);
   if(timeout)setTimeout(close,timeout);
 }
 function showConfirm(message,{title='Подтверждение',okText='OK',cancelText='Отмена',danger=false}={}){
@@ -1734,7 +2281,7 @@ function showConfirm(message,{title='Подтверждение',okText='OK',can
     $('#dlg-modal').innerHTML=`<h2>${esc(title)}</h2><div class="md">${message}</div>
       <div class="m-actions"><button class="btn ghost" id="dlg-no">${esc(cancelText)}</button>
       <button class="btn ${danger?'danger':''}" id="dlg-yes">${esc(okText)}</button></div>`;
-    $('#dlg-overlay').classList.add('show');
+    $('#dlg-overlay').classList.add('show');applyI18n($('#dlg-modal'));
     $('#dlg-yes').onclick=()=>{_closeDlg();res(true);};
     $('#dlg-no').onclick=()=>{_closeDlg();res(false);};
   });
@@ -1743,7 +2290,7 @@ function showAlert(message,{title='',okText='OK'}={}){
   return new Promise(res=>{
     $('#dlg-modal').innerHTML=`${title?`<h2>${esc(title)}</h2>`:''}<div class="md">${message}</div>
       <div class="m-actions"><button class="btn" id="dlg-ok">${esc(okText)}</button></div>`;
-    $('#dlg-overlay').classList.add('show');
+    $('#dlg-overlay').classList.add('show');applyI18n($('#dlg-modal'));
     $('#dlg-ok').onclick=()=>{_closeDlg();res();};
   });
 }
@@ -1753,7 +2300,7 @@ function showPrompt(message,{title='Ввод',value='',placeholder='',okText='OK
       <div class="field"><input id="dlg-input" value="${esc(value)}" placeholder="${esc(placeholder)}"></div>
       <div class="m-actions"><button class="btn ghost" id="dlg-cancel">Отмена</button>
       <button class="btn" id="dlg-okp">${esc(okText)}</button></div>`;
-    $('#dlg-overlay').classList.add('show');
+    $('#dlg-overlay').classList.add('show');applyI18n($('#dlg-modal'));
     const inp=$('#dlg-input');inp.focus();inp.select();
     const ok=()=>{const v=inp.value;_closeDlg();res(v);};
     $('#dlg-okp').onclick=ok;
@@ -1768,6 +2315,13 @@ api('/api/vectors/status').then(d=>{const n=$('#vec-note');if(n){n.textContent=d
 render();
 updateGlobalBadge();
 refreshMenuCounts();
+/* ---- i18n: тоггл языка в шапке + начальный перевод статичной разметки ---- */
+(function(){
+  const b=document.getElementById('lang-btn');
+  if(b)b.onclick=()=>setLang(LANG==='en'?'ru':'en');
+  updateLangBtn();
+  if(LANG==='en')applyI18nAll();  // перевести шапку/навигацию (render() уже перевёл #main)
+})();
 renderSideUsage();
 setInterval(updateGlobalBadge,6000);
 setInterval(refreshMenuCounts,30000);
