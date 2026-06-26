@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.pyc
+runs/*.out
+runs/*.rc
+runs/server.log
+runs/waiting/
+runs/.usage_cache.json
+runs/.reload-trigger
+
+# Локальные данные доски — НЕ публиковать (промпты, пути проектов, токены).
+# Board data — never publish (prompts, project paths, tokens).
+prof.db
+prof.db-wal
+prof.db-shm
+vectors.db
+
+# Окружение и приватные настройки агента
+.env
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Внутренние артефакты, не для публикации
+tasks.json
+docs/plans/

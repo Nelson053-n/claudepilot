@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>prof</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23cc785c'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='21' font-weight='700' fill='white' text-anchor='middle'%3Ep%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23cc785c'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='21' font-weight='700' fill='white' text-anchor='middle'%3Ep%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;450;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===== Claude / Anthropic-inspired дизайн-система ===== */
+:root{
+  --bg:#f5f4ef;            /* тёплый кремовый фон */
+  --surface:#fbfaf7;
+  --card:#ffffff;
+  --ink:#1f1d1a;          /* почти-чёрный тёплый */
+  --ink-soft:#56524b;
+  --muted:#8a847a;
+  --line:#e7e3d9;
+  --line-2:#dfdacd;
+  --clay:#cc785c;         /* фирменный терракотовый акцент */
+  --clay-600:#bd6a4f;
+  --clay-tint:#f6ece6;
+  --olive:#7a8450;
+  --sky:#5a7d9a;
+  --amber:#c08a2d;
+  --red:#b5483a;
+  --green:#5f7a4f;
+  --radius:14px; --radius-sm:9px;
+  --shadow:0 1px 2px rgba(60,50,40,.05),0 4px 14px rgba(60,50,40,.06);
+  --shadow-lg:0 10px 40px rgba(60,50,40,.13);
+}
+:root[data-theme="dark"]{
+  --bg:#1f1d1a; --surface:#272420; --card:#2e2a25; --ink:#f0ece3; --ink-soft:#cfc8bb;
+  --muted:#9a9286; --line:#3a352e; --line-2:#443e35; --clay-tint:#3a2a23;
+  --shadow:0 1px 2px rgba(0,0,0,.2),0 4px 14px rgba(0,0,0,.25); --shadow-lg:0 12px 40px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.serif{font-family:'Source Serif 4',Georgia,serif;letter-spacing:-.01em}
+.app{display:flex;min-height:100vh}
+/* sidebar */
+.side{width:218px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--line);
+  padding:20px 13px;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 22px;font-family:'Source Serif 4',serif;font-weight:600;font-size:20px}
+.brand .mark{width:26px;height:26px;border-radius:7px;background:var(--clay);display:grid;place-items:center;color:#fff;font-size:14px;box-shadow:0 2px 8px rgba(204,120,92,.4)}
+.nav{display:flex;flex-direction:column;gap:2px;flex:1}
+.nav-i{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:var(--radius-sm);color:var(--ink-soft);
+  cursor:pointer;font-weight:500;transition:.13s;user-select:none;font-size:13.5px}
+.nav-i:hover{background:var(--clay-tint);color:var(--ink)}
+.nav-i.active{background:var(--clay);color:#fff;box-shadow:0 2px 8px rgba(204,120,92,.3)}
+.nav-i .ico{font-size:15px;width:18px;text-align:center}
+.nav-i .badge{margin-left:auto;font-size:11px;background:rgba(0,0,0,.07);padding:1px 8px;border-radius:20px;font-weight:600}
+.nav-i.active .badge{background:rgba(255,255,255,.25)}
+.side-usage{padding:10px 8px;border-top:1px solid var(--line);margin-top:8px;display:flex;flex-direction:column;gap:7px}
+.side-usage .su-row{display:flex;align-items:center;gap:7px;font-size:11px}
+.side-usage .su-lbl{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--muted);width:20px}
+.side-usage .su-bar{flex:1;height:6px;border-radius:6px;background:var(--line);overflow:hidden}
+.side-usage .su-fill{display:block;height:100%;border-radius:6px;transition:width .4s}
+.side-usage .su-left{font-size:9.5px;color:var(--muted);white-space:nowrap;min-width:38px;text-align:right}
+.side-usage .su-val{font-weight:600;font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
+.su-cost-lim{font-weight:400;opacity:.7;font-size:10px}
+.side-usage .su-cost{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--clay-600);
+  background:var(--clay-tint);padding:4px 8px;border-radius:7px;text-align:center;cursor:help}
+.side-foot{border-top:1px solid var(--line);padding-top:12px;margin-top:8px;display:flex;gap:6px;align-items:center}
+.icon-btn{background:none;border:1px solid var(--line-2);width:32px;height:32px;border-radius:8px;cursor:pointer;
+  font-size:15px;color:var(--ink-soft);transition:.13s;display:grid;place-items:center}
+.icon-btn:hover{background:var(--clay-tint);border-color:var(--clay)}
+/* main */
+.main{flex:1;padding:30px 38px;max-width:1600px;min-width:0;overflow-x:hidden}
+.head{display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap}
+.head h1{font-size:27px;font-weight:600}
+.head .sub{color:var(--muted);font-size:13px}
+.spacer{flex:1}
+.search{position:relative;min-width:300px}
+.search input{width:100%;background:var(--card);border:1px solid var(--line-2);color:var(--ink);
+  padding:10px 14px 10px 36px;border-radius:var(--radius-sm);font-size:13.5px;font-family:inherit;box-shadow:var(--shadow)}
+.search input:focus{outline:none;border-color:var(--clay)}
+.search .si{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.toggle{display:flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;font-size:12px}
+.toggle button{background:var(--card);border:none;padding:7px 12px;cursor:pointer;color:var(--ink-soft);font-family:inherit;font-weight:500}
+.toggle button.on{background:var(--clay);color:#fff}
+/* buttons */
+.btn{background:var(--clay);color:#fff;border:none;padding:10px 17px;border-radius:var(--radius-sm);
+  font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;transition:.13s;box-shadow:0 2px 8px rgba(204,120,92,.25)}
+.btn:hover{background:var(--clay-600);transform:translateY(-1px)}
+.btn.ghost{background:var(--card);color:var(--ink-soft);border:1px solid var(--line-2);box-shadow:var(--shadow)}
+.btn.ghost:hover{border-color:var(--clay);color:var(--ink);background:var(--card)}
+.btn.ghost.on{background:var(--clay-tint);color:var(--clay-600);border-color:var(--clay)}
+.btn.sm{padding:6px 12px;font-size:12px}
+.btn.danger{background:var(--card);color:var(--red);border:1px solid var(--line-2);box-shadow:none}
+.btn.green{background:var(--green);box-shadow:0 2px 8px rgba(95,122,79,.25)}
+.btn.green:hover{background:#54703f}
+/* cards / grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:15px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;
+  box-shadow:var(--shadow);transition:.16s;cursor:pointer}
+.card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px);border-color:var(--line-2)}
+.card h3{font-size:16px;font-weight:600;margin-bottom:6px}
+.card .meta{color:var(--muted);font-size:12.5px;display:flex;gap:14px;align-items:center;margin-top:12px}
+.pill{font-size:11px;padding:2px 10px;border-radius:20px;font-weight:600;white-space:nowrap}
+.pill.todo{background:#f7eede;color:var(--amber)} .pill.feedback{background:#efe9f5;color:#7c5fb0}
+.pill.project{background:var(--clay-tint);color:var(--clay-600)} .pill.user{background:#e9f0e3;color:var(--green)}
+.pill.reference{background:#eceae4;color:var(--muted)} .pill.memory{background:#eceae4;color:var(--muted)}
+.row{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 17px;margin-bottom:9px;cursor:pointer;transition:.13s;box-shadow:var(--shadow)}
+.row:hover{border-color:var(--clay);transform:translateX(2px)}
+.row .rt{display:flex;align-items:center;gap:10px;margin-bottom:3px}
+.row .rtitle{font-weight:600} .row .rdesc{color:var(--ink-soft);font-size:13px}
+.row .rsrc{color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;margin-top:4px}
+.muted{color:var(--muted)} .back{color:var(--clay);cursor:pointer;font-weight:600;font-size:13px;margin-bottom:14px;display:inline-block}
+.back:hover{text-decoration:underline}
+.empty{text-align:center;color:var(--muted);padding:60px 20px;font-size:14px}
+.empty .big{font-size:32px;margin-bottom:10px;opacity:.5}
+/* ===== KANBAN ===== */
+.stat-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:-8px 0 16px}
+.stat{font-size:12px;font-weight:600;padding:4px 11px;border-radius:20px;border:1px solid var(--line-2);background:var(--card);color:var(--ink-soft);display:inline-flex;align-items:center;gap:5px}
+.stat.run{background:#f7eede;color:var(--amber);border-color:#e6d3a8}
+.stat.run::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--amber);animation:pulse 1.1s infinite}
+.stat.prop{background:#efe9f5;color:#7c5fb0;border-color:#ddd0ee}
+.stat.review{background:#e6eef3;color:var(--sky);border-color:#cdddE8}
+.stat.ok{background:#e9f0e3;color:var(--green);border-color:#cfe0c0}
+.stat.err{background:#f5e3e0;color:var(--red);border-color:#e8c5bf}
+.stat.notdep{background:#f6dede;color:#a23b3b;border-color:#e7bcbc;font-weight:700}
+.stat.tot{background:transparent;color:var(--muted);border:none}
+.usage{display:flex;gap:14px;align-items:center;margin-left:6px}
+.umeter{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-soft)}
+.umeter .ulabel{font-weight:700;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px}
+.umeter .ubar{width:54px;height:6px;border-radius:6px;background:var(--line);overflow:hidden}
+.umeter .ufill{display:block;height:100%;border-radius:6px;transition:width .4s}
+.umeter .uval{font-weight:600;font-variant-numeric:tabular-nums}
+.umeter .uleft{color:var(--muted);font-size:10.5px}
+.ucost{font-size:11.5px;font-weight:700;color:var(--clay-600);background:var(--clay-tint);padding:3px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;cursor:help}
+.board-bar{display:flex;gap:10px;margin-bottom:18px;align-items:center;flex-wrap:wrap}
+.board-tab{padding:7px 15px;border-radius:20px;border:1px solid var(--line-2);background:var(--card);
+  cursor:pointer;font-weight:600;font-size:13px;color:var(--ink-soft);box-shadow:var(--shadow)}
+.board-tab.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.board-tab-wrap{position:relative;display:inline-flex;align-items:center}
+.board-tab-menu-btn{background:none;border:none;cursor:pointer;font-size:12px;padding:0 4px 0 2px;
+  opacity:0;line-height:1;color:inherit;transition:opacity .15s}
+.board-tab-wrap:hover .board-tab-menu-btn{opacity:.5}
+.board-tab-wrap:hover .board-tab-menu-btn:hover{opacity:1}
+.board-tab.active+.board-tab-menu-btn{opacity:.4}
+.board-ctx-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--card);
+  border:1px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);min-width:150px;padding:4px 0}
+.board-ctx-menu button{display:block;width:100%;text-align:left;background:none;border:none;
+  padding:7px 14px;cursor:pointer;font-size:13px;color:var(--ink-soft)}
+.board-ctx-menu button:hover{background:var(--line-1);color:var(--ink)}
+.board-ctx-menu .danger:hover{color:#e55}
+.kanban{display:flex;gap:11px;padding-bottom:8px;align-items:flex-start}
+.kcol{flex:1 1 0;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:11px 9px;min-height:140px}
+.kcol.dragover{border-color:var(--clay);background:var(--clay-tint)}
+.kcol-head{display:flex;align-items:center;gap:6px;margin-bottom:11px;padding:0 3px}
+.kcol-head .ct{font-weight:600;font-size:12.5px;line-height:1.2;flex:1;min-width:0} .kcol-head .cn{font-size:11px;color:var(--muted);background:var(--card);padding:1px 7px;border-radius:20px;border:1px solid var(--line);flex-shrink:0}
+.kcard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin-bottom:9px;
+  box-shadow:var(--shadow);cursor:grab;transition:.12s}
+.kcard:hover{box-shadow:var(--shadow-lg)} .kcard:active{cursor:grabbing}
+.kcard.dragging{opacity:.5;transform:rotate(1.5deg)}
+.kcard.waiting{border-color:var(--amber);animation:kwait 1.4s ease-in-out infinite}
+@keyframes kwait{0%,100%{box-shadow:0 0 0 0 rgba(192,138,45,.45)}50%{box-shadow:0 0 0 4px rgba(192,138,45,0)}}
+.kc-wait{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--amber);
+  background:#f7eede;border:1px solid #e6d3a8;border-radius:6px;padding:1px 6px;margin-bottom:7px}
+.kcard{position:relative}
+.kcard.scheduled{border-color:var(--sky)}
+.kcard.notdep{border-color:#a23b3b;border-left-width:3px;background:#fcf5f5}
+.kc-sched{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--sky);
+  background:#e6eef3;border:1px solid #cdddE8;border-radius:6px;padding:1px 6px;margin-bottom:7px}
+.kc-sched-badge{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:11px;background:var(--sky);color:#fff;
+  box-shadow:var(--shadow)}
+.tag.scheduled{background:#e6eef3;color:var(--sky)}
+.kcard .kc-top{margin-bottom:5px}
+.kc-id{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;color:var(--muted);background:var(--surface);border:1px solid var(--line);padding:0 5px;border-radius:5px;margin-right:5px;vertical-align:1px}
+.kc-id-modal{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--clay-600);margin-right:4px}
+.kcard .kc-title{font-weight:600;font-size:13.5px;line-height:1.35;flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.kcard .kc-prompt{color:var(--ink-soft);font-size:12px;max-height:48px;overflow:hidden;margin-bottom:7px;
+  position:relative;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;transition:max-height .22s ease}
+.kcard .kc-prompt.clamped::after{content:"";position:absolute;left:0;right:0;bottom:0;height:20px;
+  background:linear-gradient(transparent,var(--card))}
+.kc-cost{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:11px;font-family:'JetBrains Mono',monospace}
+.kc-cost .cost-tok{color:var(--muted)}
+.kc-cost .cost-usd{margin-left:auto;font-weight:600;color:var(--clay-600);background:var(--clay-tint);padding:1px 7px;border-radius:20px}
+.kc-live{margin-bottom:7px;display:flex;align-items:center;gap:8px;min-height:14px}
+.kc-pulse{display:inline-flex;gap:3px;align-items:center}
+.kc-pulse i{width:5px;height:5px;border-radius:50%;background:var(--amber);opacity:.4;animation:kcp 1.2s infinite}
+.kc-pulse i:nth-child(2){animation-delay:.2s} .kc-pulse i:nth-child(3){animation-delay:.4s}
+@keyframes kcp{0%,100%{opacity:.3;transform:scale(.85)}50%{opacity:1;transform:scale(1)}}
+.modal-live{background:#1f1d1a;color:#cbd5e1;border-radius:9px;padding:11px 13px;margin:10px 0;
+  font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;min-height:280px;max-height:460px;overflow:auto;white-space:pre-wrap}
+.modal-live-label{font-size:11px;color:var(--amber);font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.kc-live .kc-live-cost{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--clay-600)}
+.kcard .kc-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+.tag{font-size:10px;padding:1px 8px;border-radius:20px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.tag.agent{background:#efe9f5;color:#7c5fb0} .tag.user{background:var(--clay-tint);color:var(--clay-600)}
+.tag.uptime{background:#e6eef3;color:var(--sky)} .tag.audit{background:#f7eede;color:var(--amber)}
+.tag.running{background:#f7eede;color:var(--amber)} .tag.done{background:#e9f0e3;color:var(--green)}
+.tag.failed{background:#f5e3e0;color:var(--red)}
+.tag.needs{background:#fde8d4;color:#b5651d;font-weight:700} .tag.interrupted{background:#eceae4;color:var(--muted)}
+.tag.paused{background:#e7eef6;color:#3a6398;font-weight:600}
+:root[data-theme="dark"] .tag.paused{background:#27313f;color:#7da6d8}
+.tag.notdep{background:#f6dede;color:#a23b3b;font-weight:700}
+.tag.queued{background:#eceae4;color:var(--muted)}
+.vbadge{font-size:10px;padding:1px 8px;border-radius:20px;font-weight:600;cursor:pointer}
+.vbadge.ok{background:#e9f0e3;color:var(--green)} .vbadge.bad{background:#f5e3e0;color:var(--red)}
+.spin{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);animation:pulse 1.1s infinite}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+.mini{background:none;border:none;cursor:pointer;font-size:13px;opacity:.6;padding:2px;color:var(--ink-soft)}
+.mini:hover{opacity:1;color:var(--clay)}
+/* status board cards (services/mcp) */
+.svc{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 17px;margin-bottom:9px;box-shadow:var(--shadow)}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot.up{background:var(--green);box-shadow:0 0 8px rgba(95,122,79,.5)} .dot.down{background:var(--red)} .dot.unknown{background:var(--muted)}
+.sdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sdot.on{background:var(--green);box-shadow:0 0 7px rgba(95,122,79,.6);animation:pulse 1.4s infinite}
+.svc .sname{font-weight:600} .svc .surl{color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace}
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(40,34,28,.4);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding:50px 20px;z-index:50}
+.dlg-overlay{z-index:60;background:rgba(40,34,28,.5);align-items:center}
+.dlg-modal{max-width:440px}
+.toasts{position:fixed;right:18px;bottom:18px;z-index:100;display:flex;flex-direction:column;gap:10px;max-width:360px}
+.toast{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--clay);border-radius:var(--radius);
+  box-shadow:var(--shadow-lg);padding:13px 16px;font-size:13.5px;color:var(--ink);display:flex;align-items:flex-start;gap:10px;
+  animation:toastIn .25s cubic-bezier(.2,.8,.2,1);cursor:default}
+.toast.out{animation:toastOut .2s ease forwards}
+.toast.ok{border-left-color:var(--green)} .toast.err{border-left-color:var(--red)} .toast.info{border-left-color:var(--sky)}
+.toast .t-ico{font-size:16px;line-height:1.3;flex-shrink:0}
+.toast .t-body{flex:1}.toast .t-title{font-weight:600;margin-bottom:2px}.toast .t-msg{color:var(--ink-soft);font-size:12.5px}
+.toast .t-x{cursor:pointer;opacity:.5;font-size:15px;line-height:1}.toast .t-x:hover{opacity:1}
+@keyframes toastIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes toastOut{to{transform:translateX(120%);opacity:0}}
+.overlay.show{display:flex}
+.modal{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);width:100%;max-width:660px;padding:26px;max-height:84vh;overflow:auto;box-shadow:var(--shadow-lg)}
+.modal-x{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:8px;border:1px solid var(--line-2);background:var(--card);color:var(--ink-soft);cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:1}
+.modal-x:hover{border-color:var(--clay);color:var(--ink)}
+.modal.wide{max-width:980px;max-height:90vh}
+.modal h2{font-size:19px;margin-bottom:16px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:6px;font-weight:600}
+.field input,.field textarea,.field select{width:100%;background:var(--surface);border:1px solid var(--line-2);color:var(--ink);padding:11px 13px;border-radius:var(--radius-sm);font-family:inherit;font-size:13.5px}
+.field textarea{min-height:130px;resize:vertical;font-family:'JetBrains Mono',monospace;line-height:1.5}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--clay)}
+.with-mic{position:relative}
+.with-mic .micbtn{position:absolute;right:8px;bottom:8px;width:34px;height:34px;border-radius:8px;border:1px solid var(--line-2);background:var(--card);cursor:pointer;font-size:15px}
+.with-mic .micbtn.rec{background:var(--red);color:#fff;animation:pulse 1s infinite}
+.m-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.answer-box{margin-top:16px;padding:14px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface)}
+.answer-box textarea{width:100%;margin-top:8px;border:1px solid var(--line-2);border-radius:8px;padding:9px 11px;font:inherit;font-size:13px;background:var(--card);color:var(--ink);resize:vertical}
+.quick-answers{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.qa-btn{font-size:12px;padding:5px 11px;border-radius:20px;border:1px solid var(--line-2);background:var(--card);color:var(--ink-soft);cursor:pointer;transition:.12s}
+.qa-btn:hover{background:var(--sky);color:#fff;border-color:var(--sky)}
+.md{font-size:14px;line-height:1.7;color:var(--ink-soft)}
+.md h1,.md h2,.md h3{margin:16px 0 8px;font-weight:600;color:var(--ink)}
+.md code{background:var(--surface);padding:1px 6px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.md pre{background:var(--surface);padding:13px;border-radius:9px;overflow:auto;margin:10px 0;border:1px solid var(--line)}
+.md strong{color:var(--ink)} .md ul{margin:8px 0 8px 20px} .md a{color:var(--clay)}
+.result-box{background:#1f1d1a;color:#e8e3d8;border-radius:9px;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;max-height:440px;overflow:auto;margin-top:12px}
+.warn{background:#f7eede;border:1px solid #e6d3a8;border-radius:var(--radius-sm);padding:11px 15px;font-size:12.5px;color:#8a6516;margin-bottom:18px}
+.kb-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.kb-links span{font-size:10.5px;background:var(--surface);border:1px solid var(--line);padding:2px 9px;border-radius:20px;color:var(--muted)}
+.section-h{font-family:'Source Serif 4',serif;font-size:17px;font-weight:600;margin:22px 0 11px}
+.cost-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:8px}
+.cost-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:17px 18px;box-shadow:var(--shadow)}
+.cost-card .cc-label{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px}
+.cost-card .cc-val{font-family:'Source Serif 4',serif;font-size:26px;font-weight:700;letter-spacing:-.02em}
+.cost-card .cc-sub{font-size:11.5px;color:var(--muted);margin-top:4px}
+.cost-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.cost-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:11px 16px;border-bottom:1px solid var(--line);font-weight:600}
+.cost-table td{padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px}
+.cost-table td:nth-child(n+2){font-family:'JetBrains Mono',monospace}
+.cost-table tr:last-child td{border-bottom:none}
+.cost-table .c-usd{font-weight:600;color:var(--clay-600)}
+.cost-table tr.warn td{background:#fdf3ec}
+.cost-table .flag{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;color:#b25b35;background:#fbe6da;padding:1px 7px;border-radius:20px;font-family:inherit;cursor:help}
+/* дашборд «кто жрёт квоту» */
+.quota-banner{display:flex;gap:14px;align-items:flex-start;background:#fdf0eb;border:1px solid #f0c9b9;border-left:4px solid var(--red);border-radius:var(--radius);padding:15px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+:root[data-theme="dark"] .quota-banner{background:#3a2722;border-color:#5a3a2e}
+.quota-banner .qb-ico{font-size:20px;line-height:1.2}
+.quota-banner .qb-title{font-weight:700;font-size:14px;margin-bottom:3px}
+.quota-banner .qb-msg{font-size:13px;color:var(--ink-soft);line-height:1.5}
+.quota-banner .qb-meta{font-size:11px;color:var(--muted);margin-top:6px;font-family:'JetBrains Mono',monospace}
+.quota-banner code,.cost-table code{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--clay-tint);padding:1px 5px;border-radius:4px;color:var(--clay-600)}
+.quota-ok{background:#eef3e8;border:1px solid #cfe0c0;border-left:4px solid var(--green);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--green);font-weight:600}
+.prod-banner{display:flex;gap:14px;align-items:center;background:#fff7e8;border:1px solid #f0dcae;border-left:4px solid #e0a020;border-radius:var(--radius);padding:13px 16px;margin:12px 0 16px;box-shadow:var(--shadow)}
+.prod-banner.err{background:#fdf0eb;border-color:#f0c9b9;border-left-color:var(--red)}
+:root[data-theme="dark"] .prod-banner{background:#33291a;border-color:#5a4a2e}
+:root[data-theme="dark"] .prod-banner.err{background:#3a2722;border-color:#5a3a2e}
+.prod-banner .pb-ico{font-size:20px;line-height:1.2}
+.prod-banner>div{flex:1}
+.prod-banner .pb-title{font-weight:700;font-size:14px;margin-bottom:3px}
+.prod-banner .pb-msg{font-size:13px;color:var(--ink-soft);line-height:1.45}
+.prod-banner .pb-meta{font-size:11px;color:var(--muted);margin-top:5px;font-family:'JetBrains Mono',monospace}
+.prod-banner code{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--clay-tint);padding:1px 5px;border-radius:4px;color:var(--clay-600)}
+:root[data-theme="dark"] .quota-ok{background:#2a3324;border-color:#3f5234}
+.quota-split{margin:14px 0 4px}
+.quota-split .qs-bar{display:flex;height:30px;border-radius:8px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow)}
+.quota-split .qs-inter,.quota-split .qs-task{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;transition:width .4s}
+.quota-split .qs-inter{background:linear-gradient(var(--clay),var(--clay-600))}
+.quota-split .qs-task{background:linear-gradient(var(--green),#4d6640)}
+.qk{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;font-family:inherit}
+.qk-interactive{background:var(--clay-tint);color:var(--clay-600)}
+.qk-task{background:#e9f0e3;color:var(--green)}
+:root[data-theme="dark"] .qk-task{background:#2a3324}
+.daybars{display:flex;align-items:flex-end;gap:6px;height:130px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:8px}
+.daybar{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;height:100%;justify-content:flex-end}
+.daybar .db-fill{width:100%;max-width:34px;border-radius:5px 5px 0 0;background:linear-gradient(var(--clay),var(--clay-600));min-height:2px;transition:height .4s}
+.daybar .db-lbl{font-size:9.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.daybar .db-val{font-size:9.5px;color:var(--clay-600);font-weight:700;font-family:'JetBrains Mono',monospace}
+.note{font-size:12px;color:var(--muted);margin-left:8px}
+.spk{cursor:pointer;opacity:.5;margin-left:6px}.spk:hover{opacity:1}
+.md pre{background:#1f1d1a;border-radius:8px;padding:12px 14px;overflow:auto;margin:8px 0}
+.md pre code{background:none;padding:0;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55}
+.md code{background:rgba(0,0,0,.07);border-radius:4px;padding:1px 5px;font-family:'JetBrains Mono',monospace;font-size:.92em}
+.md table{border-collapse:collapse;margin:8px 0;font-size:13px}
+.md th,.md td{border:1px solid var(--line,#ddd);padding:5px 10px;text-align:left}
+.md th{background:rgba(0,0,0,.05);font-weight:600}
+.md blockquote{border-left:3px solid var(--clay-600,#b06a4a);margin:8px 0;padding:2px 0 2px 12px;color:var(--muted)}
+.md a{color:var(--clay-600,#b06a4a)}
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" integrity="sha384-wH75j6z1lH97ZOpMOInqhgKzFkAInZPPSPlZpYKYTOqsaizPvhQZmAtLcPKXpLyH" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" integrity="sha384-/TQbtLCAerC3jgaim+N78RZSDYV7ryeoBCVqTuzRrFec2akfBkHS7ACQ3PQhvMVi" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="mark">p</span> prof</div>
+    <nav class="nav">
+      <div class="nav-i active" data-view="board"><span class="ico">▦</span> Канбан <span class="badge" id="b-board">·</span></div>
+      <div class="nav-i" data-view="projects"><span class="ico">◳</span> Проекты <span class="badge" id="b-proj">·</span></div>
+      <div class="nav-i" data-view="todos"><span class="ico">◷</span> TODO <span class="badge" id="b-todo">·</span></div>
+      <div class="nav-i" data-view="services"><span class="ico">◎</span> Сервисы <span class="badge" id="b-svc">·</span></div>
+      <div class="nav-i" data-view="skills"><span class="ico">⚒</span> Навыки</div>
+      <div class="nav-i" data-view="daily"><span class="ico">▤</span> Активность</div>
+      <div class="nav-i" data-view="sessions"><span class="ico">◉</span> Сессии <span class="badge" id="b-sess">·</span></div>
+      <div class="nav-i" data-view="schedule"><span class="ico">⏱</span> Расписание <span class="badge" id="b-sched">·</span></div>
+      <div class="nav-i" data-view="cost"><span class="ico">⛁</span> Затраты</div>
+      <div class="nav-i" data-view="kb"><span class="ico">✦</span> Knowledge</div>
+      <div class="nav-i" data-view="git"><span class="ico">⎇</span> Git / бэкап</div>
+    </nav>
+    <div id="side-usage" class="side-usage"></div>
+    <div class="side-foot">
+      <button class="icon-btn" id="theme-btn" title="Тема">◐</button>
+      <button class="icon-btn" id="tts-btn" title="Голос. вывод">🔈</button>
+      <span class="note" id="vec-note" style="cursor:pointer" title="Семантический поиск по памяти — открыть «смысл»-поиск"></span>
+    </div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div class="overlay dlg-overlay" id="dlg-overlay"><div class="modal dlg-modal" id="dlg-modal"></div></div>
+<div id="toasts" class="toasts"></div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const TOKEN='__PROF_TOKEN__';
+const auth=(o={})=>{o.headers={...(o.headers||{}),'Authorization':'Bearer '+TOKEN};return o;};
+const api=(u,o)=>fetch(u,auth(o)).then(r=>r.json());
+const post=(u,b)=>api(u,{method:'POST',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+// Защита от двойного клика: блокирует кнопку (event.currentTarget) на время промиса fn().
+async function guard(fn){const btn=window.event&&window.event.currentTarget;
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.style.opacity='.5';}
+  try{return await fn();}finally{if(btn){btn.disabled=false;btn.style.opacity='';}}}
+let S={view:'board',projects:[],boards:[],columns:[],titles:{},curBoard:null,poll:null,ttsOn:false,streams:{},openCardId:null,waiting:{}};
+
+function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function gitRepoName(url){if(!url)return '';try{const u=url.replace(/\.git$/,'');const m=u.match(/[:/]([^/]+\/[^/]+)$/);return m?m[1]:u.split('/').slice(-2).join('/');}catch(e){return url;}}
+function ago(ts){if(!ts)return '';const d=Date.now()/1000-ts;if(d<60)return 'только что';if(d<3600)return Math.floor(d/60)+' мин';if(d<86400)return Math.floor(d/3600)+' ч';return Math.floor(d/86400)+' дн';}
+function plural(n,one,few,many){const m10=n%10,m100=n%100;if(m10===1&&m100!==11)return one;if(m10>=2&&m10<=4&&(m100<10||m100>=20))return few;return many;}
+// «через сколько» до будущего unix-времени (ts — секунды). null → ''
+function until(ts){if(!ts)return '';let d=ts-Date.now()/1000;if(d<=0)return 'сейчас';if(d<60)return 'через <1 мин';if(d<3600)return 'через '+Math.floor(d/60)+' мин';if(d<86400)return 'через '+Math.floor(d/3600)+' ч '+Math.floor(d%3600/60)+' м';return 'через '+Math.floor(d/86400)+' дн '+Math.floor(d%86400/3600)+' ч';}
+// абсолютное локальное время из unix-секунд (для тултипа). принимает и ISO-строку
+function fmtTs(ts){if(!ts)return '';const d=typeof ts==='string'?new Date(ts):new Date(ts*1000);return isNaN(d)?'':d.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
+// интервал в секундах → человекочитаемо
+function ivl(s){if(s==null)return '—';if(s<60)return s+' c';if(s<3600)return (s%60?(s/60).toFixed(0):s/60)+' мин';return (s/3600).toFixed(0)+' ч';}
+function md_fallback(t){t=esc(t);t=t.replace(/```([\s\S]*?)```/g,(m,c)=>'<pre>'+c+'</pre>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  t=t.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  t=t.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\[\[([^\]]+)\]\]/g,'<code>$1</code>');
+  t=t.replace(/^- (.+)$/gm,'<li>$1</li>').replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>').replace(/\n\n/g,'<br><br>');return t;}
+function md(t){
+  if(typeof marked==='undefined'||typeof DOMPurify==='undefined')return md_fallback(t);
+  return DOMPurify.sanitize(marked.parse(t||'',{breaks:true}));
+}
+function hl(root){
+  if(typeof hljs==='undefined'||!root)return;
+  root.querySelectorAll('pre code').forEach(el=>{try{hljs.highlightElement(el);}catch(e){}});
+}
+
+/* ---- тема ---- */
+const savedTheme=localStorage.getItem('prof_theme')||'light';
+document.documentElement.setAttribute('data-theme',savedTheme);
+$('#theme-btn').onclick=()=>{const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);localStorage.setItem('prof_theme',t);};
+
+/* ---- голосовой вывод (TTS) ---- */
+function ttsSpeaking(){return ('speechSynthesis'in window)&&(speechSynthesis.speaking||speechSynthesis.pending);}
+function stopSpeak(){if('speechSynthesis'in window)speechSynthesis.cancel();updateTtsBtn();}
+function updateTtsBtn(){const b=$('#tts-btn');if(!b)return;
+  if(ttsSpeaking()){b.textContent='⏹';b.title='Остановить звук';b.style.color='var(--red)';}
+  else{b.textContent=S.ttsOn?'🔊':'🔈';b.title=S.ttsOn?'Озвучка вкл — клик выкл':'Озвучка выкл — клик вкл';b.style.color=S.ttsOn?'var(--clay)':'';}}
+$('#tts-btn').onclick=()=>{
+  if(ttsSpeaking()){stopSpeak();return;}            // играет → стоп
+  S.ttsOn=!S.ttsOn;updateTtsBtn();                   // иначе тоггл вкл/выкл
+};
+// выбираем самый естественный русский голос: сетевые (Google/Microsoft Online) звучат
+// человечнее встроенных. voices грузятся асинхронно — кэшируем при onvoiceschanged.
+let _ruVoice=undefined;
+function pickRuVoice(){const vs=speechSynthesis.getVoices();if(!vs.length)return null;
+  const ru=vs.filter(v=>/ru[-_]?ru|russian|русск/i.test(v.lang+' '+v.name));
+  const score=v=>{const n=v.name.toLowerCase();let s=0;
+    if(/google/.test(n))s+=5; if(/online|natural|neural/.test(n))s+=4;
+    if(/microsoft/.test(n))s+=2; if(v.localService)s-=1; return s;};
+  ru.sort((a,b)=>score(b)-score(a));
+  return ru[0]||vs.find(v=>/^ru/i.test(v.lang))||null;}
+if('speechSynthesis'in window){speechSynthesis.onvoiceschanged=()=>{_ruVoice=pickRuVoice();};_ruVoice=pickRuVoice();}
+function speak(text){if(!('speechSynthesis'in window))return;const u=new SpeechSynthesisUtterance(text.slice(0,600));
+  if(_ruVoice===undefined)_ruVoice=pickRuVoice();
+  if(_ruVoice){u.voice=_ruVoice;u.lang=_ruVoice.lang;}else{u.lang='ru-RU';}
+  u.rate=0.98;u.pitch=1.0;u.onend=updateTtsBtn;u.onerror=updateTtsBtn;
+  speechSynthesis.cancel();speechSynthesis.speak(u);updateTtsBtn();}
+// клик по 🔈 у заголовка: играет — стоп, иначе озвучить. Иконка отражает состояние.
+function speakToggle(btn,text){if(!('speechSynthesis'in window))return;
+  if(ttsSpeaking()){stopSpeak();return;}
+  const u=new SpeechSynthesisUtterance(String(text).slice(0,600));
+  if(_ruVoice===undefined)_ruVoice=pickRuVoice();
+  if(_ruVoice){u.voice=_ruVoice;u.lang=_ruVoice.lang;}else{u.lang='ru-RU';}
+  u.rate=0.98;u.pitch=1.0;
+  const sync=()=>{btn.textContent=ttsSpeaking()?'⏹':'🔈';updateTtsBtn();};
+  u.onend=sync;u.onerror=sync;
+  speechSynthesis.cancel();speechSynthesis.speak(u);
+  btn.textContent='⏹';updateTtsBtn();}
+setInterval(updateTtsBtn,500);  // синхронизируем иконку с реальным состоянием речи
+
+/* ---- голосовой ввод (STT) ---- */
+function attachMic(btnId,targetId){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const btn=$('#'+btnId);if(!btn)return;
+  if(!SR){btn.style.display='none';return;}
+  let rec=null,on=false;
+  btn.onclick=()=>{
+    if(on){rec&&rec.stop();return;}
+    rec=new SR();rec.lang='ru-RU';rec.interimResults=true;rec.continuous=true;
+    let base=$('#'+targetId).value;
+    rec.onresult=e=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;
+      $('#'+targetId).value=(base?base+' ':'')+t;};
+    rec.onend=()=>{on=false;btn.classList.remove('rec');};
+    rec.start();on=true;btn.classList.add('rec');
+  };
+}
+
+/* ---- навигация ---- */
+$$('.nav-i').forEach(n=>n.onclick=()=>{$$('.nav-i').forEach(x=>x.classList.remove('active'));n.classList.add('active');
+  S.view=n.dataset.view;if(S.poll){clearInterval(S.poll);S.poll=null;}
+  if(S.view!=='board'){for(const id in S.streams){S.streams[id].close();delete S.streams[id];}}
+  render();});
+
+async function render(){const m=$('#main');
+  if(S.view==='board')await viewBoard(m);
+  else if(S.view==='projects')await viewProjects(m);
+  else if(S.view==='todos')await viewTodos(m);
+  else if(S.view==='services')await viewServices(m);
+  else if(S.view==='skills')await viewSkills(m);
+  else if(S.view==='daily')await viewDaily(m);
+  else if(S.view==='sessions')await viewSessions(m);
+  else if(S.view==='schedule')await viewSchedule(m);
+  else if(S.view==='kb')await viewKb(m);
+  else if(S.view==='cost')await viewCost(m);
+  else if(S.view==='git')await viewGit(m);
+}
+
+/* ===================== КАНБАН ===================== */
+async function loadBoardMeta(){const d=await api('/api/boards');S.columns=d.columns;S.titles=d.titles;S.boards=d.boards;
+  if(!S.curBoard&&S.boards.length)S.curBoard=S.boards[0].id;}
+async function viewBoard(m){
+  await loadBoardMeta();
+  if(!S.projects.length)S.projects=await api('/api/projects');
+  const cards=S.curBoard?await api('/api/cards?board_id='+S.curBoard):[];
+  // карточки, чей агент стоит и ждёт ввода/разрешения → card_id:waiting_since(сек)
+  const waiting=await api('/api/cards/waiting').catch(()=>[]);
+  S.waiting={};waiting.forEach(w=>S.waiting[w.card_id]=w.waiting_since);
+  const wip=await api('/api/settings/wip').catch(()=>({limit:'?',running:0}));
+  const par=await api('/api/settings/parallelism').catch(()=>({mode:'project'}));
+  const running=cards.filter(c=>c.status==='running').length;
+  const queued=cards.filter(c=>c.status==='queued').length;
+  const cnt={
+    running, queued, total:cards.length,
+    proposed:cards.filter(c=>c.column==='proposed').length,
+    review:cards.filter(c=>c.column==='review').length,
+    done:cards.filter(c=>c.column==='done').length,
+    failed:cards.filter(c=>c.status==='failed').length,
+    notdep:cards.filter(c=>c.status==='not_deployed').length,
+  };
+  updateGlobalBadge();
+  const curSlug=S.boards.find(b=>b.id===S.curBoard)?.slug||'';
+  const prodLag=await api('/api/prod-lag').catch(()=>({}));
+  const chip=(label,val,cls)=>val?`<span class="stat ${cls||''}">${val} ${label}</span>`:'';
+  m.innerHTML=`<div class="head"><h1>Канбан</h1><span class="sub">задачи · агент предлагает, ты подтверждаешь</span>
+    <div class="spacer"></div>
+    <button class="btn ghost sm" onclick="openAnalyze()">✦ Анализ слабых мест</button>
+    <button class="btn" onclick="openNewCard()">+ Задача</button></div>
+    ${prodLagBanner(curSlug,prodLag[curSlug])}
+    <div class="stat-row">
+      <span class="stat wip" title="Лимит одновременно бегущих задач (WIP, по всем доскам). Достигнут — новые встают в очередь и стартуют автоматически. Клик — изменить." onclick="editWip(${wip.limit})">⚙ В работе ${wip.running}/${wip.limit}</span>
+      <span class="stat wip" title="Стратегия параллелизма. project — одна задача на проект (защита от гонки записи в файл). worktree — задачи проекта параллельно, каждая в своём git-worktree, результат мерджится в основную ветку (для самого prof worktree отключён → ведёт себя как project). off — без ограничений. Клик — изменить." onclick="editParallelism('${par.mode}')">⛓ ${({project:'1 на проект',worktree:'worktree',off:'без лока'})[par.mode]||par.mode}</span>
+      ${chip('в очереди',cnt.queued,'queue')}
+      ${chip('в работе',cnt.running,'run')}
+      ${chip('предложено',cnt.proposed,'prop')}
+      ${chip('на проверке',cnt.review,'review')}
+      ${chip('готово',cnt.done,'ok')}
+      ${chip('ошибка',cnt.failed,'err')}
+      ${chip('🚧 не выкачено',cnt.notdep,'notdep')}
+      <span class="stat tot">${cnt.total} ${plural(cnt.total,'задача','задачи','задач')} всего</span>
+    </div>
+    <div class="board-bar">
+      ${S.boards.map(b=>`<div class="board-tab-wrap" data-bw="${b.id}">
+        <div class="board-tab ${b.id===S.curBoard?'active':''}" data-b="${b.id}">${esc(b.name)}</div>
+        <button class="board-tab-menu-btn" data-bm="${b.id}" title="Действия">⋯</button>
+      </div>`).join('')}
+      <button class="btn ghost sm" onclick="openNewBoard()">+ доска</button></div>
+    ${S.boards.length?`<div class="kanban" id="kanban">${S.columns.map(col=>{
+      const cc=cards.filter(c=>c.column===col);
+      return `<div class="kcol" data-col="${col}">
+        <div class="kcol-head"><span class="ct">${S.titles[col]||col}</span><span class="cn">${cc.length}</span></div>
+        <div class="kcol-body" data-col="${col}">${cc.map(kcard).join('')}</div></div>`;}).join('')}</div>`
+    :`<div class="empty"><div class="big">▦</div>Нет досок. Создай задачу или запусти анализ проекта.</div>`}`;
+  $$('.board-tab[data-b]').forEach(t=>t.onclick=()=>{S.curBoard=+t.dataset.b;viewBoard(m);});
+  $$('.board-tab-menu-btn[data-bm]').forEach(btn=>{btn.onclick=e=>{e.stopPropagation();openBoardMenu(btn,+btn.dataset.bm)};});
+  bindKanban();bindStreams(cards);
+  // Снимок СОСТАВА доски (id+статус+колонка каждой карточки) для анти-моргания.
+  // Сравниваем с ним в поллере — ререндерим ТОЛЬКО при реальном изменении состава.
+  S._boardSnap=cards.map(c=>c.id+':'+c.status+':'+c.column).sort().join('|');
+  // НЕ перерисовываем всю доску по таймеру (это вызывало моргание running-карточек).
+  // Живые цифры приходят через SSE (bindStreams). Фолбэк: раз в 8с сверяем снимок
+  // состава с API. Раньше сравнивали с Object.keys(S.streams) — а мёртвый SSE-поток
+  // не всегда чистится, поэтому a!==b держалось всегда → ререндер каждые 8с (моргание).
+  if(running&&!S.poll)S.poll=setInterval(async()=>{
+    if(S.view!=='board'){clearInterval(S.poll);S.poll=null;return;}
+    try{const cur=await api('/api/cards?board_id='+S.curBoard);
+      const snap=cur.map(c=>c.id+':'+c.status+':'+c.column).sort().join('|');
+      if(snap!==S._boardSnap)viewBoard($('#main'));  // состав изменился → один ререндер
+    }catch(e){}
+  },8000);
+}
+
+/* ---- live-стриминг прогресса running-карточек (SSE) ---- */
+function bindStreams(cards){
+  const running=new Set(cards.filter(c=>c.status==='running').map(c=>c.id));
+  // закрываем EventSource карточек, которые перестали быть running (или исчезли)
+  for(const id in S.streams){ if(!running.has(+id)){S.streams[id].close();delete S.streams[id];} }
+  // открываем поток для каждой running-карточки (один раз — переживает re-render)
+  running.forEach(id=>{
+    if(S.streams[id])return;
+    const es=new EventSource('/api/cards/'+id+'/stream');
+    S.streams[id]=es;
+    es.onmessage=e=>{
+      let d;try{d=JSON.parse(e.data);}catch{return;}
+      if(d.done){es.close();delete S.streams[id];viewBoard($('#main'));return;}
+      // карточка в списке: ТОЛЬКО спокойные цифры (без моргающего текста консоли)
+      const box=document.getElementById('live-'+id);
+      const cst=box&&box.querySelector('.kc-live-cost');
+      if(cst){const parts=[];
+        if(d.running_cost!=null)parts.push('$'+d.running_cost.toFixed(d.running_cost<0.01?4:2));
+        if(d.input_tokens!=null||d.output_tokens!=null)parts.push('↓'+tok(d.input_tokens||0)+' ↑'+tok(d.output_tokens||0));
+        const txt=parts.join(' · ');
+        if(cst.textContent!==txt)cst.textContent=txt;}  // не перезаписываем тем же → без мелькания
+      // живой текст консоли — только если ЭТА карточка открыта в модалке
+      if(S.openCardId===+id){const mt=document.getElementById('modal-live-text');
+        if(mt&&d.last_text!=null&&mt.textContent!==d.last_text)mt.textContent=d.last_text;}
+    };
+    es.onerror=()=>{};  // EventSource сам реконнектит; финализацию подхватит 8с-поллер
+  });
+}
+async function updateGlobalBadge(){
+  try{const s=await api('/api/cards/stats');
+    const b=$('#b-board');if(!b)return;
+    b.textContent=s.running||'·';
+    b.title=`${s.running} в работе · ${s.proposed} предложено · ${s.total} всего (по всем доскам)`;
+    b.style.background=s.running?'var(--amber)':'';
+    b.style.color=s.running?'#fff':'';
+  }catch(e){}
+}
+function setBadge(id,val){const b=$('#'+id);if(!b)return;const s=String(val);if(b.textContent!==s)b.textContent=s;}
+async function refreshMenuCounts(){
+  try{const c=await api('/api/menu-counts');
+    localStorage.setItem('menuCounts',JSON.stringify(c));
+    applyMenuCounts(c);
+  }catch(e){}
+}
+function applyMenuCounts(c){
+  setBadge('b-proj',c.projects);
+  setBadge('b-todo',c.todos);
+  setBadge('b-svc',c.services_ok||'·');
+}
+(function(){try{const c=JSON.parse(localStorage.getItem('menuCounts')||'null');if(c)applyMenuCounts(c);}catch(e){}})();
+async function renderSideUsage(){
+  const el=document.getElementById('side-usage');if(!el)return;
+  try{const u=await api('/api/usage');if(!u.available){el.innerHTML='';return;}
+    const w=u.window_5h;
+    const row=(lbl,util,left)=>{const c=util>=90?'var(--red)':util>=70?'var(--amber)':'var(--green)';
+      return `<div class="su-row" title="${lbl}: ${util}% · сброс через ${left||'—'}"><span class="su-lbl">${lbl}</span>
+        <span class="su-bar"><span class="su-fill" style="width:${Math.min(util,100)}%;background:${c}"></span></span>
+        <span class="su-val">${util}%</span><span class="su-left">${left||''}</span></div>`;};
+    let h=row('5h',u.five_hour.util,u.five_hour.left)+row('7d',u.seven_day.util,u.seven_day.left);
+    if(w)h+=`<div class="su-cost" title="Расход по ВСЕМ сессиям Claude Code за 5ч (вход+выход — реальная генерация). Полный API-эквивалент с кэшем ≈$${w.cost_full_usd} (раздут, на подписке не деньги). Вход ${w.input.toLocaleString()} · выход ${w.output.toLocaleString()} · сообщений ${w.messages}">~$${w.cost_usd} <span class="su-cost-lim">· ${u.five_hour.util}% лимита</span></div>`;
+    el.innerHTML=h;
+  }catch(e){}
+}
+function tok(n){if(n==null)return '';if(n>=1000)return (n/1000).toFixed(n>=10000?0:1)+'k';return n;}
+function vbadge(c){
+  if(!c.validate_status||!['review','done'].includes(c.column))return '';
+  // not_deployed уже показывает тег статуса (🚧 не выкачено) в футере — не дублируем здесь.
+  if(c.validate_status==='not_deployed')return '';
+  const ok=c.validate_status==='passed';
+  const title=(c.validate_log||(ok?'валидация пройдена':'валидация не прошла')).slice(0,400);
+  return `<span class="vbadge ${ok?'ok':'bad'}" title="${esc(title).replace(/"/g,'&quot;')}"
+    onclick="event.stopPropagation();showValidateLog(${c.id})">${ok?'✓ тесты':'✗ валидация'}</span>`;
+}
+async function showValidateLog(id){
+  const cards=await api('/api/cards?board_id='+S.curBoard);const c=cards.find(x=>x.id===id);if(!c)return;
+  showModal(`<h2>${c.validate_status==='passed'?'✓':'✗'} Валидация — ${esc(c.title)}</h2>
+    <div class="result-box">${esc(c.validate_log||'(лог пуст)')}</div>
+    <div class="m-actions">
+      <button class="btn" onclick="revalidate(${c.id})">↻ Перепроверить</button>
+      <button class="btn ghost" onclick="closeModal()">Закрыть</button></div>`,true);
+}
+async function revalidate(id){await post(`/api/cards/${id}/validate`);closeModal();viewBoard($('#main'));}
+function reviewBadge(c){
+  // Ярлычок авто-ревью: показывается в колонках review/done если есть вердикт
+  if(!c.review_verdict)return '';
+  if(!['review','done'].includes(c.column))return '';
+  const done=c.review_verdict.startsWith('DONE');
+  const tip=c.review_verdict.slice(0,400);
+  return `<span class="vbadge ${done?'ok':'bad'}" style="cursor:default" title="${esc(tip).replace(/"/g,'&quot;')}">${done?'✓ проверена':'⚠ доработка'}</span>`;
+}
+// unix-секунды → 'ЧЧ:ММ' (или 'дд.мм ЧЧ:ММ', если не сегодня) в локальном времени
+function fmtSchedTime(ts){
+  if(!ts)return '';
+  const d=new Date(ts*1000),now=new Date();
+  const hm=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  if(d.toDateString()===now.toDateString())return hm;
+  return d.toLocaleDateString([],{day:'2-digit',month:'2-digit'})+' '+hm;
+}
+function kcard(c){
+  const hasCost=c.cost_usd!=null;
+  const waitSince=S.waiting&&S.waiting[c.id];
+  const waitMin=waitSince!=null?Math.max(1,Math.round(waitSince/60)):0;
+  const sched=c.status==='scheduled';
+  return `<div class="kcard${waitSince!=null?' waiting':''}${sched?' scheduled':''}${c.status==='not_deployed'?' notdep':''}" draggable="true" data-id="${c.id}">
+    ${sched?'<span class="kc-sched-badge" title="Отложенный старт">⏰</span>':''}
+    <div class="kc-top"><span class="kc-title"><span class="kc-id">#${c.id}</span>${esc(c.title)}</span></div>
+    ${waitSince!=null?`<div class="kc-wait" title="Агент остановился и ждёт твоего ответа/разрешения">⏳ ждёт ввода ${waitMin}мин</div>`:''}
+    ${sched?`<div class="kc-sched" title="Задача запустится автоматически в указанное время при свободном слоте">⏰ старт ${fmtSchedTime(c.scheduled_at)}</div>`:''}
+    ${c.prompt?`<div class="kc-prompt clamped">${esc(c.prompt)}</div>`:''}
+    ${c.status==='running'?`<div class="kc-live" id="live-${c.id}"><span class="kc-pulse"><i></i><i></i><i></i></span><span class="kc-live-cost"></span></div>`:''}
+    ${hasCost?`<div class="kc-cost" title="вход ${c.input_tokens||0} · выход ${c.output_tokens||0} · кэш-чтение ${c.cache_read_tokens||0} токенов${c.duration_ms?' · '+(c.duration_ms/1000).toFixed(0)+'с':''}">
+      <span class="cost-tok">↓${tok(c.input_tokens)} ↑${tok(c.output_tokens)}</span>
+      <span class="cost-usd">$${c.cost_usd.toFixed(c.cost_usd<0.01?4:2)}</span></div>`:''}
+    <div class="kc-foot">
+      <span class="tag ${c.origin}">${c.origin}</span>
+      ${c.status==='running'?'<span class="tag running"><span class="spin"></span> идёт</span>':''}
+      ${c.status==='done'?'<span class="tag done">✓ готово</span>':''}
+      ${c.status==='needs_input'?'<span class="tag needs" title="Агент задал вопрос или не смог проверить — нужен твой ответ">❓ нужен ответ</span>':''}
+      ${c.status==='failed'?'<span class="tag failed">ошибка</span>':''}
+      ${c.status==='not_deployed'?'<span class="tag notdep" title="Агент отрапортовал готово, но сам признал, что результат не выкачен/не закоммичен — на прод/тест не попадёт. Нужна доработка.">🚧 не выкачено</span>':''}
+      ${c.status==='merge_conflict'?'<span class="tag notdep" title="Задача выполнена в своём git-worktree, но при мердже ветки prof-card-N в основную возник конфликт. Работа сохранена (ветка и worktree на месте) — домерджи вручную.">⚠ конфликт мерджа</span>':''}
+      ${c.status==='interrupted'?'<span class="tag interrupted" title="Прервано при перезапуске — запусти заново">⏸ прервано</span>':''}
+      ${c.status==='paused'?'<span class="tag paused" title="Задача раздулась, а 5h-окно почти исчерпано — поставлена на паузу, чтобы не уронить соседей в session-limit. Доделается автоматически (--resume) в следующем окне.">⏸️ пауза (раздулась)</span>':''}
+      ${c.status==='stopped'?'<span class="tag interrupted">остановлено</span>':''}
+      ${c.status==='queued'?'<span class="tag queued" title="Достигнут WIP-лимит — задача в очереди, стартует автоматически, как только освободится слот">⏳ в очереди</span>':''}
+      ${c.status==='scheduled'?'<span class="tag scheduled" title="Отложенный старт — запустится автоматически в назначенное время">⏰ отложено</span>':''}
+      ${vbadge(c)}
+      ${reviewBadge(c)}
+      <span style="flex:1"></span>
+      ${c.column==='proposed'?`<button class="mini" title="Подтвердить → запустить" onclick="guard(()=>approve(${c.id}))">✓</button>
+        ${c.prompt?`<button class="mini" title="Отложить старт — подтвердит и запустит в заданное время" onclick="schedulePrompt(${c.id})">⏰</button>`:''}
+        <button class="mini" title="Отклонить" onclick="reject(${c.id})">✕</button>`:''}
+      ${c.column==='approved'&&['idle','interrupted'].includes(c.status)&&c.prompt?`<button class="mini" title="Отложить старт" onclick="schedulePrompt(${c.id})">⏰</button>`:''}
+      ${['failed','needs_input'].includes(c.status)&&c.prompt?`<button class="mini" title="Отложить до след. окна: впиши решение сейчас, агент доделает позже" onclick="scheduleFixPrompt(${c.id})">⏰</button>`:''}
+      ${c.status==='scheduled'?`<button class="mini" title="Снять отложенный старт" onclick="unscheduleCard(${c.id})">⏰✕</button>`:''}
+      ${c.column==='review'?`<button class="mini" title="Агент проверит, выполнена ли задача → Готово или на доработку" onclick="reviewAgent(${c.id})">🔍</button>`:''}
+      <button class="mini" title="Открыть / редактировать" onclick="openCard(${c.id})">⤢</button>
+      <button class="mini" title="Удалить" onclick="delCard(${c.id})">🗑</button>
+    </div></div>`;
+}
+function bindKanban(){
+  let dragId=null;
+  $$('.kcard').forEach(k=>{
+    k.ondragstart=e=>{dragId=+k.dataset.id;k.classList.add('dragging');e.dataTransfer.effectAllowed='move';};
+    k.ondragend=()=>{k.classList.remove('dragging');$$('.kcol').forEach(c=>c.classList.remove('dragover'));};
+    k.onclick=e=>{if(e.target.closest('.mini'))return;openCard(+k.dataset.id);};
+  });
+  $$('.kcol').forEach(col=>{
+    col.ondragover=e=>{e.preventDefault();col.classList.add('dragover');};
+    col.ondragleave=()=>col.classList.remove('dragover');
+    col.ondrop=async e=>{e.preventDefault();col.classList.remove('dragover');
+      if(dragId==null)return;const newCol=col.dataset.col;
+      await post(`/api/cards/${dragId}/move`,{column:newCol,position:0});
+      viewBoard($('#main'));};
+  });
+}
+async function editWip(cur){
+  const v=await showPrompt('Сколько задач может бежать одновременно (рекомендуется 3-5):',
+    {title:'⚙ WIP-лимит',value:String(cur),okText:'Сохранить'});
+  if(v==null)return;
+  const n=parseInt(v,10);
+  if(!Number.isInteger(n)||n<1){toast('Нужно целое число ≥ 1',{title:'Неверное значение',type:'err'});return;}
+  const r=await post('/api/settings/wip',{limit:n});
+  if(r&&r.started)toast(`Лимит ${n}. Из очереди запущено: ${r.started}.`,{title:'⚙ WIP',type:'ok'});
+  viewBoard($('#main'));
+}
+async function editParallelism(cur){
+  const opts=[
+    {m:'project',t:'1 задача на проект',d:'Задачи одного проекта строго последовательно. Защита от гонки записи в общий файл. Разные проекты — параллельно. (рекомендуется)'},
+    {m:'worktree',t:'Git-worktree + мердж',d:'Задачи одного проекта бегут параллельно, каждая в своём git-worktree (ветка prof-card-N). По завершении ветка мерджится в основную; конфликт → статус «конфликт мерджа» (работа сохранена). Для самого prof worktree отключён — ведёт себя как «1 на проект».'},
+    {m:'off',t:'Без ограничений',d:'Любые задачи параллельно (только WIP-лимит). Риск гонки записи в один файл.'},
+  ];
+  const body=opts.map(o=>`<label style="display:block;margin:8px 0;padding:10px;border:1px solid var(--line-2);border-radius:8px;cursor:pointer">
+    <input type="radio" name="par" value="${o.m}" ${o.m===cur?'checked':''}> <b>${o.t}</b>
+    <div class="muted" style="margin-left:22px;font-size:12px">${o.d}</div></label>`).join('');
+  showModal(`<h2>⛓ Параллелизм задач</h2><div class="md">Как запускать задачи одного проекта:</div>
+    ${body}
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Отмена</button>
+    <button class="btn" onclick="saveParallelism()">Сохранить</button></div>`);
+}
+async function saveParallelism(){
+  const sel=document.querySelector('input[name="par"]:checked');
+  if(!sel)return;
+  const r=await post('/api/settings/parallelism',{mode:sel.value});
+  closeModal();
+  toast(`Режим: ${sel.value}${r&&r.started?`, запущено из очереди: ${r.started}`:''}`,{title:'⛓ Параллелизм',type:'ok'});
+  viewBoard($('#main'));
+}
+// множители оценки относительно средней задачи проекта:
+// обычная задача ~1.0× (чтение+запись), анализ ~0.8×, проверка ~0.6× (только чтение+тесты)
+const EST_MULT={task:1.0,analyze:0.8,review:0.6};
+// Честная оценка стоимости запуска по реальной статистике проекта (avg по slug,
+// fallback на среднюю по всем). Плюс гард по 5h-лимиту. Возвращает {html, estVal}.
+async function estCost(kind,slug){
+  const mult=EST_MULT[kind]??1.0;let html='',estVal=null,overLimit=false;
+  try{const cc=await api('/api/cards/cost');
+    const bs=slug&&cc.by_slug&&cc.by_slug[slug];
+    const base=bs?bs.avg_cost_usd:cc.avg_cost_usd, n=bs?bs.tasks:cc.tasks_with_cost;
+    if(base){estVal=base*mult;
+      const src=bs?'средней задаче этого проекта':'средней по всем проектам';
+      html+=`<br><b>≈$${estVal.toFixed(2)}</b> (оценка по ${src} $${base.toFixed(2)}, n=${n})`;}
+  }catch(e){}
+  try{const u=await api('/api/usage');
+    if(u.available&&u.five_hour&&u.five_hour.util>90){overLimit=true;
+      html+=`<br><span style="color:var(--red);font-weight:600">⚠ лимит почти исчерпан — осталось ${100-u.five_hour.util}% (5ч), запуск может не завершиться</span>`;}
+  }catch(e){}
+  return {html,estVal,overLimit};
+}
+async function approve(id){
+  let slug='';try{const cards=await api('/api/cards?board_id='+S.curBoard);const c=cards.find(x=>x.id===id);if(c)slug=c.slug;}catch(e){}
+  const {html,overLimit}=await estCost('task',slug);
+  // Запуск без подтверждения. Спрашиваем только если 5h-лимит почти исчерпан (запуск может сорваться).
+  if(overLimit&&!await showConfirm(
+    `Задача будет подтверждена и запущена агентом в папке проекта.<br><br>~1-3 мин, расходует токены.${html}`,
+    {title:'▶ Запуск задачи',okText:'Всё равно запустить',cancelText:'Отмена'}))return;
+  await post(`/api/cards/${id}/move`,{column:'approved',position:0});viewBoard($('#main'));}
+async function reject(id){await post(`/api/cards/${id}/move`,{column:'rejected',position:0});viewBoard($('#main'));}
+// Диалог выбора времени отложенного старта. Возвращает {when} | null.
+// next_period — начало следующего 5h-окна (+5мин, считает бэкенд); либо конкретный
+// datetime-local (его шлём как ISO-строку с локальной зоной — бэкенд парсит fromisoformat).
+function scheduleDialog(){
+  return new Promise(res=>{
+    $('#dlg-modal').innerHTML=`<h2>⏰ Отложить старт</h2>
+      <div class="field" style="gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="radio" name="sched-when" value="next_period" checked style="width:auto">
+          В начале следующего 5h-периода (+5 мин)</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="radio" name="sched-when" value="custom" style="width:auto">
+          В конкретное время</label>
+        <input type="datetime-local" id="sched-dt" disabled style="margin-left:26px">
+      </div>
+      <div class="m-actions"><button class="btn ghost" id="sd-cancel">Отмена</button>
+      <button class="btn" id="sd-ok">Отложить</button></div>`;
+    $('#dlg-overlay').classList.add('show');
+    const dt=$('#sched-dt');
+    $$('input[name="sched-when"]').forEach(r=>r.onchange=()=>{dt.disabled=r.value!=='custom'||!r.checked;});
+    $('#sd-cancel').onclick=()=>{_closeDlg();res(null);};
+    $('#sd-ok').onclick=()=>{
+      const mode=document.querySelector('input[name="sched-when"]:checked').value;
+      if(mode==='custom'){
+        if(!dt.value){toast('Укажи время',{title:'Нужно время',type:'err'});return;}
+        // datetime-local — локальное время без зоны; добавляем смещение для ISO
+        const d=new Date(dt.value);_closeDlg();res({when:d.toISOString()});
+      }else{_closeDlg();res({when:'next_period'});}
+    };
+  });
+}
+async function schedulePrompt(id){
+  const r=await scheduleDialog();if(!r)return;
+  const c=await post(`/api/cards/${id}/schedule`,r);
+  if(!c||c.scheduled_at==null){toast(c&&c.detail||'не удалось',{title:'✕ Ошибка',type:'err'});return;}
+  toast(`Старт отложен на ${fmtSchedTime(c.scheduled_at)}`,{title:'⏰ Отложено',type:'ok'});
+  if(S.openCardId===id)closeModal();viewBoard($('#main'));
+}
+// Отложить failed/needs_input-карточку «доделать»: показываем её результат/вопрос,
+// даём вписать решение СЕЙЧАС (пока есть время разобраться), а прогон — позже,
+// когда обновится квота. cont=true → при старте агент продолжит с учётом сделанного.
+async function scheduleFixPrompt(id){
+  const cards=await api('/api/cards?board_id='+S.curBoard);
+  const c=cards.find(x=>x.id===id);if(!c)return;
+  const tail=(c.result||'').slice(-1200);
+  $('#dlg-modal').innerHTML=`<h2>⏰ Отложить «доделать» #${id}</h2>
+    <div class="md" style="font-size:12px;color:var(--ink-soft)">Статус: <b>${c.status==='needs_input'?'ждёт ответа':'ошибка'}</b>. Впиши решение/ответ сейчас — агент учтёт его и доделает в назначенное окно (продолжит, не с нуля).</div>
+    ${tail?`<div class="result-box" style="max-height:160px;overflow:auto;margin-top:8px;font-size:12px">${esc(tail)}</div>`:''}
+    <div class="field" style="margin-top:10px"><label>Твоё решение / ответ агенту (необязательно)</label>
+      <textarea id="sf-answer" placeholder="напр.: пароль такой-то / пропусти этот шаг / делай вариант A…" style="min-height:70px"></textarea></div>
+    <div class="field" style="gap:8px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="radio" name="sf-when" value="next_period" checked style="width:auto"> В начале следующего 5h-периода (+5 мин)</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="radio" name="sf-when" value="custom" style="width:auto"> В конкретное время</label>
+      <input type="datetime-local" id="sf-dt" disabled style="margin-left:26px"></div>
+    <div class="m-actions"><button class="btn ghost" id="sf-cancel">Отмена</button>
+    <button class="btn" id="sf-ok">⏰ Отложить</button></div>`;
+  $('#dlg-overlay').classList.add('show');
+  const dt=$('#sf-dt');
+  $$('input[name="sf-when"]').forEach(r=>r.onchange=()=>{dt.disabled=r.value!=='custom'||!r.checked;});
+  $('#sf-cancel').onclick=()=>_closeDlg();
+  $('#sf-ok').onclick=async()=>{
+    const mode=document.querySelector('input[name="sf-when"]:checked').value;
+    let when='next_period';
+    if(mode==='custom'){ if(!dt.value){toast('Укажи время',{title:'Нужно время',type:'err'});return;} when=new Date(dt.value).toISOString(); }
+    const answer=($('#sf-answer').value||'').trim();
+    _closeDlg();
+    const r=await post(`/api/cards/${id}/schedule`,{when,cont:true,answer:answer||null});
+    if(!r||r.scheduled_at==null){toast(r&&r.detail||'не удалось',{title:'✕ Ошибка',type:'err'});return;}
+    toast(`#${id} отложена на ${fmtSchedTime(r.scheduled_at)} — продолжит с учётом решения`,{title:'⏰ Отложено',type:'ok'});
+    if(S.openCardId===id)closeModal();viewBoard($('#main'));
+  };
+}
+async function unscheduleCard(id){
+  await post(`/api/cards/${id}/unschedule`);
+  toast('Отложенный старт снят',{title:'⏰ Снято',type:'info'});
+  if(S.openCardId===id)closeModal();viewBoard($('#main'));
+}
+async function delCard(id){await fetch('/api/cards/'+id,auth({method:'DELETE'}));viewBoard($('#main'));}
+async function openCard(id){
+  const cards=await api('/api/cards?board_id='+S.curBoard);const c=cards.find(x=>x.id===id);if(!c)return;
+  const editable=c.status!=='running';
+  S.openCardId=id;
+  showModal(`<h2><span class="kc-id-modal">#${c.id}</span> <span class="tag ${c.origin}">${c.origin}</span>
+    <span class="spk" onclick="speakToggle(this,${JSON.stringify(c.result||c.prompt||'').replace(/"/g,'&quot;')})">🔈</span></h2>
+    ${!editable?`<div class="modal-live-label"><span class="kc-pulse"><i></i><i></i><i></i></span> агент работает — живой вывод из консоли:</div><div class="modal-live" id="modal-live-text">…</div>`:''}
+    <div class="field"><label>Заголовок</label>
+      <input id="ec-title" value="${esc(c.title)}" ${editable?'':'disabled'}></div>
+    <div class="field with-mic"><label>Задание агенту — уточни/исправь реализацию (🎙 можно надиктовать)</label>
+      <textarea id="ec-prompt" ${editable?'':'disabled'} style="min-height:352px;max-height:75vh">${esc(c.prompt||'')}</textarea>
+      ${editable?'<button class="micbtn" id="ec-mic" title="Голосовой ввод">🎙</button>':''}</div>
+    ${c.result?`<label style="font-size:12px;color:var(--ink-soft);font-weight:600">Результат</label>
+      <div class="md" style="max-height:55vh;overflow:auto;margin-top:8px">${md(c.result.slice(-9000))}</div>`:''}
+    ${c.review_verdict&&['review','done'].includes(c.column)?`<div class="answer-box" style="border-color:${c.review_verdict.startsWith('DONE')?'var(--green)':'var(--red)'}">
+      <label style="font-size:12px;color:var(--ink-soft);font-weight:600">${c.review_verdict.startsWith('DONE')?'✓ Авто-проверка: выполнено':'⚠ Авто-проверка: нужна доработка'}</label>
+      <div class="md" style="margin-top:4px;font-size:13px">${md(c.review_verdict.replace(/^(DONE|REWORK):\s*/,''))}</div>
+    </div>`:''}
+    ${editable&&c.status==='needs_input'?`<div class="answer-box">
+      <label style="font-size:12px;color:var(--ink-soft);font-weight:600">❓ Агент ждёт ответа — ответь и продолжи</label>
+      <div class="quick-answers">${QUICK_ANSWERS.map((q,i)=>`<button type="button" class="qa-btn" onclick="setAnswer(${i})" title="${esc(q.full)}">${esc(q.label)}</button>`).join('')}</div>
+      <textarea id="ec-answer" placeholder="Твой ответ агенту (можно выбрать кнопкой выше и дополнить)…" style="min-height:80px"></textarea>
+      <button class="btn" style="background:var(--sky);margin-top:8px" onclick="answerAndContinue(${c.id})">↩ Ответить и продолжить</button>
+    </div>`:''}
+    ${editable&&c.column==='review'&&c.review_verdict&&!c.review_verdict.startsWith('DONE')?`<div class="answer-box" style="border-color:var(--sky)">
+      <label style="font-size:12px;color:var(--ink-soft);font-weight:600">✏️ Комментарий к доработке (предзаполнен вердиктом)</label>
+      <textarea id="ec-rework-comment" style="min-height:80px">${esc(c.review_verdict.replace(/^(DONE|REWORK):\s*/,'').slice(0,1000))}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn" style="background:var(--sky)" onclick="reworkNow(${c.id})" title="Отправить агента доделывать прямо сейчас">▶ На доработку сейчас</button>
+        <button class="btn ghost" onclick="reworkSchedule(${c.id})" title="Доделает в следующем 5h-окне">⏰ Отложить доработку</button>
+      </div>
+    </div>`:''}
+    <div class="m-actions">
+      ${editable&&c.column==='review'?`<button class="btn" style="background:#7c5fb0" onclick="reviewAgent(${c.id})" title="Агент проверит файлы/тесты → Готово или на доработку">🔍 На проверку</button>`:''}
+      ${editable&&c.column!=='done'?`<button class="btn green" onclick="markDone(${c.id})">✓ Завершить</button>`:''}
+      ${c.status==='scheduled'?`<button class="btn ghost" onclick="unscheduleCard(${c.id})" title="Снять отложенный старт">⏰✕ Снять отложку</button>`
+        :(editable&&c.prompt&&['idle','interrupted'].includes(c.status)?`<button class="btn ghost" onclick="schedulePrompt(${c.id})" title="Запустить позже — в начале следующего периода или в заданное время">⏰ Отложить старт</button>`:'')}
+      ${editable&&c.prompt&&['failed','needs_input'].includes(c.status)?`<button class="btn ghost" onclick="scheduleFixPrompt(${c.id})" title="Впиши решение сейчас, агент доделает в следующем окне (продолжит)">⏰ Отложить (доделать)</button>`:''}
+      ${editable&&c.result&&c.status!=='done'&&c.status!=='needs_input'&&c.column!=='review'?`<button class="btn" style="background:var(--sky)" onclick="continueCard(${c.id})" title="Доделать с учётом уже сделанного (не с нуля)">▶ Продолжить</button>`:''}
+      ${editable?`<button class="btn ghost" onclick="saveCard(${c.id})">💾 Сохранить</button>
+        <button class="btn ghost" onclick="saveAndRun(${c.id})">↻ С нуля</button>`
+       :`<button class="btn danger" onclick="stopCard(${c.id})">■ Стоп</button>`}
+      <button class="btn ghost" onclick="closeModal()">Закрыть</button></div>`,true);
+  if(editable)attachMic('ec-mic','ec-prompt');
+  if(S.ttsOn&&c.result)speak(c.result);
+}
+async function saveCard(id){
+  const body=JSON.stringify({title:$('#ec-title').value,prompt:$('#ec-prompt').value});
+  closeModal();
+  await api('/api/cards/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body});
+  viewBoard($('#main'));
+}
+// Запуск без подтверждения. Модалку показываем только если 5h-лимит почти исчерпан
+// (запуск может не завершиться) — тогда даём явно подтвердить/отменить. Возвращает true=запускать.
+async function confirmRun(id,kind,text,okText){
+  let slug='';try{const cards=await api('/api/cards?board_id='+S.curBoard);const c=cards.find(x=>x.id===id);if(c)slug=c.slug;}catch(e){}
+  const {html,overLimit}=await estCost(kind,slug);
+  if(!overLimit)return true;
+  return showConfirm(`${text}<br><br>~1-3 мин, расходует токены.${html}`,
+    {title:'▶ Запуск',okText:okText||'Всё равно запустить',cancelText:'Отмена'});
+}
+async function saveAndRun(id){
+  if(!await confirmRun(id,'task','Задача будет перезапущена с нуля по текущему заданию.','С нуля'))return;
+  const body=JSON.stringify({title:$('#ec-title').value,prompt:$('#ec-prompt').value});
+  closeModal();
+  await api('/api/cards/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body});
+  await post(`/api/cards/${id}/run`);viewBoard($('#main'));
+}
+async function rerun(id){
+  if(!await confirmRun(id,'task','Задача будет запущена заново по текущему заданию.'))return;
+  closeModal();await post(`/api/cards/${id}/run`);viewBoard($('#main'));}
+async function continueCard(id){
+  if(!await confirmRun(id,'task','Агент доделает задачу с учётом уже сделанного (не с нуля).','Продолжить'))return;
+  closeModal();await post(`/api/cards/${id}/continue`);viewBoard($('#main'));}
+
+// Подборка быстрых автоответов на типовые затыки агента (needs_input):
+// нет доступа/прав, просит подтверждение, спрашивает «как делать», не смог проверить.
+const QUICK_ANSWERS=[
+  {label:'✅ Подтверждаю, делай',full:'Да, подтверждаю — действуй по своему плану, разрешаю.'},
+  {label:'⏭ Пропусти этот шаг',full:'Пропусти этот шаг и продолжи с остальным. Что не вышло — отметь в отчёте.'},
+  {label:'🔓 Доступ есть — повтори',full:'Доступ/права есть, всё разрешено (--dangerously-skip-permissions). Повтори операцию, не спрашивая подтверждений.'},
+  {label:'🧪 Тесты не запускай',full:'Не запускай тесты/проверки сам — просто внеси изменения, я проверю отдельно.'},
+  {label:'🤔 Реши сам',full:'Реши на своё усмотрение наиболее разумным образом и доведи до конца, не переспрашивая.'},
+  {label:'✋ Останови, не нужно',full:'Не делай это. Останови задачу, оставь как есть.'},
+];
+function setAnswer(i){const t=$('#ec-answer');if(!t)return;
+  // подставляем полный текст; если поле уже не пустое — дописываем с новой строки
+  t.value=t.value.trim()?t.value.trim()+'\n'+QUICK_ANSWERS[i].full:QUICK_ANSWERS[i].full;t.focus();}
+async function answerAndContinue(id){
+  const ans=($('#ec-answer')&&$('#ec-answer').value||'').trim();
+  if(!ans){toast('Напиши ответ или выбери вариант кнопкой',{title:'Нужен ответ',type:'err'});return;}
+  if(!await confirmRun(id,'task','Агент продолжит с учётом твоего ответа.','Ответить'))return;
+  closeModal();await post(`/api/cards/${id}/continue`,{answer:ans});viewBoard($('#main'));}
+async function reviewAgent(id){
+  // получим заголовок и slug карточки для оценки и тостов
+  let ttl='#'+id,slug='';
+  try{const cards=await api('/api/cards?board_id='+S.curBoard);const c=cards.find(x=>x.id===id);if(c){ttl='#'+id+' '+c.title;slug=c.slug;}}catch(e){}
+  // оценка стоимости проверки (~60% средней задачи — только чтение+тесты, без записи)
+  const {html:est,estVal}=await estCost('review',slug);
+  const ok=await showConfirm(
+    `Агент прочитает файлы и тесты задачи, проверит по факту, выполнена ли она, и перенесёт в «Готово» либо вернёт на доработку.<br><br>~1-3 мин, расходует токены.${est}`,
+    {title:'🔍 Агентная проверка',okText:'Проверить',cancelText:'Отмена'});
+  if(!ok)return;
+  closeModal();
+  toast(`Проверяю «${esc(ttl)}»…`,{title:'🔍 Проверка запущена',type:'info',timeout:5000});
+  post(`/api/cards/${id}/review-agent`)
+    .then(r=>{
+      viewBoard($('#main'));
+      const planned=estVal!=null?`планировали ≈$${estVal.toFixed(2)}`:'';
+      const actual=r.review_cost!=null?`фактически $${r.review_cost.toFixed(2)}`:'';
+      const cost=[planned,actual].filter(Boolean).join(' · ');
+      const tail=cost?`<br><span style="opacity:.7;font-size:11px">${cost}</span>`:'';
+      if(r.verdict==='done')toast(`«${esc(ttl)}» — перенесена в «Готово».${tail}`,{title:'✓ Проверка пройдена',type:'ok',timeout:9000});
+      else toast(`«${esc(ttl)}» — возвращена на доработку.${tail}`,{title:'✗ Не пройдена',type:'err',timeout:9000});
+    })
+    .catch(e=>toast('Ошибка проверки: '+e,{title:'✕ Ошибка',type:'err'}));
+}
+async function stopCard(id){closeModal();await post(`/api/cards/${id}/stop`);viewBoard($('#main'));}
+async function markDone(id){closeModal();await post(`/api/cards/${id}/done`);viewBoard($('#main'));}
+async function reworkNow(id){
+  const comment=($('#ec-rework-comment')&&$('#ec-rework-comment').value||'').trim();
+  if(!await confirmRun(id,'task','Агент доделает задачу с учётом комментария ревьюера.','На доработку'))return;
+  closeModal();
+  await post(`/api/cards/${id}/continue`,{answer:comment||undefined});
+  viewBoard($('#main'));
+}
+async function reworkSchedule(id){
+  const comment=($('#ec-rework-comment')&&$('#ec-rework-comment').value||'').trim();
+  const cards=await api('/api/cards?board_id='+S.curBoard);
+  const c=cards.find(x=>x.id===id);if(!c)return;
+  const prefill=comment||(c.review_verdict||'').replace(/^(DONE|REWORK):\s*/,'').slice(0,1000);
+  closeModal();
+  $('#dlg-modal').innerHTML=`<h2>⏰ Отложить «доделать» #${id}</h2>
+    <div class="md" style="font-size:12px;color:var(--ink-soft)">Комментарий предзаполнен вердиктом ревьюера — дополни или перепиши.</div>
+    <div class="field" style="margin-top:10px"><label>Что доработать (получит агент)</label>
+      <textarea id="sf-answer" style="min-height:80px">${esc(prefill)}</textarea></div>
+    <div class="field" style="gap:8px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="radio" name="sf-when" value="next_period" checked style="width:auto"> В начале следующего 5h-периода (+5 мин)</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="radio" name="sf-when" value="custom" style="width:auto"> В конкретное время</label>
+      <input type="datetime-local" id="sf-dt" disabled style="margin-left:26px"></div>
+    <div class="m-actions"><button class="btn ghost" id="sf-cancel">Отмена</button>
+    <button class="btn" id="sf-ok">⏰ Отложить</button></div>`;
+  $('#dlg-overlay').classList.add('show');
+  const dt=$('#sf-dt');
+  $$('input[name="sf-when"]').forEach(r=>r.onchange=()=>{dt.disabled=r.value!=='custom'||!r.checked;});
+  $('#sf-cancel').onclick=()=>_closeDlg();
+  $('#sf-ok').onclick=async()=>{
+    const mode=document.querySelector('input[name="sf-when"]:checked').value;
+    let when='next_period';
+    if(mode==='custom'){if(!dt.value){toast('Укажи время',{title:'Нужно время',type:'err'});return;}when=new Date(dt.value).toISOString();}
+    const answer=($('#sf-answer').value||'').trim();
+    _closeDlg();
+    const r=await post(`/api/cards/${id}/schedule`,{when,cont:true,answer:answer||null});
+    if(!r||r.scheduled_at==null){toast(r&&r.detail||'не удалось',{title:'✕ Ошибка',type:'err'});return;}
+    toast(`#${id} отложена на ${fmtSchedTime(r.scheduled_at)} — продолжит с учётом доработки`,{title:'⏰ Отложено',type:'ok'});
+    viewBoard($('#main'));
+  };
+}
+let _boardMenuOpen=null;
+function closeBoardMenu(){if(_boardMenuOpen){_boardMenuOpen.remove();_boardMenuOpen=null;}}
+function openBoardMenu(btn,bid){
+  closeBoardMenu();
+  const board=S.boards.find(b=>b.id===bid);if(!board)return;
+  const wrap=btn.closest('.board-tab-wrap');
+  const menu=document.createElement('div');menu.className='board-ctx-menu';
+  menu.innerHTML=`<button onclick="renameBoardDialog(${bid})">✏️ Переименовать</button><button class="danger" onclick="deleteBoardConfirm(${bid})">🗑 Удалить доску</button>`;
+  wrap.appendChild(menu);_boardMenuOpen=menu;
+  setTimeout(()=>document.addEventListener('click',closeBoardMenu,{once:true}),0);}
+function renameBoardDialog(bid){
+  closeBoardMenu();
+  const board=S.boards.find(b=>b.id===bid);if(!board)return;
+  showModal(`<h2>Переименовать доску</h2>
+    <div class="field"><label>Название</label><input id="rb-name" value="${esc(board.name)}"></div>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Отмена</button><button class="btn" onclick="renameBoard(${bid})">Сохранить</button></div>`);}
+async function renameBoard(bid){
+  const name=$('#rb-name').value.trim();if(!name)return;
+  await fetch('/api/boards/'+bid,{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({name})});
+  closeModal();await loadBoardMeta();viewBoard($('#main'));}
+async function deleteBoardConfirm(bid){
+  closeBoardMenu();
+  const board=S.boards.find(b=>b.id===bid);if(!board)return;
+  const cards=await api('/api/cards?board_id='+bid);
+  const cnt=cards.length;
+  showModal(`<h2>Удалить доску?</h2>
+    <p>Доска <b>${esc(board.name)}</b>${cnt?` и <b>${cnt}</b> карточек`:''} будут удалены безвозвратно.</p>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Отмена</button><button class="btn danger" onclick="deleteBoard(${bid})">Удалить</button></div>`);}
+async function deleteBoard(bid){
+  await fetch('/api/boards/'+bid,auth({method:'DELETE'}));closeModal();
+  if(S.curBoard===bid)S.curBoard=null;
+  await loadBoardMeta();viewBoard($('#main'));}
+function openNewBoard(){showModal(`<h2>Новая доска</h2>
+  <div class="field"><label>Проект</label><select id="nb-slug">${S.projects.map(p=>`<option value="${p.slug}">${esc(p.name)}</option>`).join('')}</select></div>
+  <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Отмена</button><button class="btn" onclick="createBoard()">Создать</button></div>`);}
+async function createBoard(){const sel=$('#nb-slug');const p=S.projects.find(x=>x.slug===sel.value);
+  await post('/api/boards',{name:p.name,slug:p.slug});closeModal();S.curBoard=null;viewBoard($('#main'));}
+function openNewCard(hint){
+  if(!S.boards.length){openNewBoard();return;}
+  showModal(`<h2>Новая задача</h2>
+    <div class="field"><label>Доска</label><select id="nc-board">${S.boards.map(b=>`<option value="${b.id}" ${b.id===S.curBoard?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>Заголовок</label><input id="nc-title" value="${hint?esc(hint):''}"></div>
+    <div class="field with-mic"><label>Задание агенту (🎙 можно надиктовать)</label>
+      <textarea id="nc-prompt" style="min-height:416px" placeholder="Что сделать. Агент выполнит в папке проекта."></textarea>
+      <button class="micbtn" id="nc-mic" title="Голосовой ввод">🎙</button></div>
+    <label style="font-size:12px;color:var(--ink-soft);display:flex;gap:8px;align-items:center;cursor:pointer">
+      <input type="checkbox" id="nc-auto" style="width:auto"> сразу подтвердить и запустить</label>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Отмена</button><button class="btn" onclick="guard(submitCard)">Создать</button></div>`);
+  attachMic('nc-mic','nc-prompt');
+}
+async function submitCard(){
+  const bid=+$('#nc-board').value;const board=S.boards.find(b=>b.id===bid);
+  const auto=$('#nc-auto').checked;
+  const c=await post('/api/cards',{board_id:bid,title:$('#nc-title').value||'Задача',
+    prompt:$('#nc-prompt').value,slug:board.slug,origin:'user',column:auto?'approved':'proposed'});
+  if(auto)await post(`/api/cards/${c.id}/run`);
+  closeModal();S.curBoard=bid;viewBoard($('#main'));
+}
+function openAnalyze(){showModal(`<h2>✦ Анализ слабых мест</h2>
+  <p class="md">Агент прочитает проект и память, найдёт техдолг/риски/TODO и предложит задачи в колонку «Предложено» — ты подтвердишь или отклонишь.</p>
+  <div class="field" style="margin-top:14px"><label>Проект</label><select id="an-slug">${S.projects.map(p=>`<option value="${p.slug}">${esc(p.name)}</option>`).join('')}</select></div>
+  <div class="warn">Запустит headless claude (~1-3 мин). Можно закрыть окно — результат появится на доске.</div>
+  <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Отмена</button><button class="btn" onclick="runAnalyze()">Запустить анализ</button></div>`);}
+async function runAnalyze(){const slug=$('#an-slug').value;
+  const {html}=await estCost('analyze',slug);
+  const ok=await showConfirm(`Агент прочитает проект и память, найдёт техдолг/риски/TODO и предложит задачи.<br><br>~1-3 мин, расходует токены.${html}`,
+    {title:'✦ Анализ слабых мест',okText:'Запустить анализ',cancelText:'Отмена'});
+  if(!ok)return;
+  // окно «выполняется» с крестиком (showModal добавляет modal-x) + кнопкой
+  // «Свернуть»: анализ идёт на сервере, окно можно закрыть, не дожидаясь.
+  showModal(`<h2>✦ Анализирую…</h2><p class="md">Агент читает проект. Это займёт до 3 минут.<br>Можно закрыть это окно — анализ продолжится в фоне, задачи появятся на доске.</p>
+    <div class="result-box">⏳ выполняется…</div>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Свернуть</button></div>`);
+  let r;
+  try{
+    r=await post('/api/analyze/'+slug);
+  }catch(e){
+    if(S.view==='board')toast('Анализ не запустился: '+e,{title:'✦ Ошибка',type:'err'});
+    return;  // окно уже закрываемо (крестик/Свернуть)
+  }
+  // пользователь мог свернуть окно — не навязываем результат поверх
+  if(!$('#overlay').classList.contains('show')){
+    toast(`Анализ готов: предложено задач ${r.suggested}`,{title:'✦ Анализ',type:'ok'});
+    return;
+  }
+  $('#modal').innerHTML='<button class="modal-x" title="Закрыть" onclick="closeModal()">×</button>'+
+    `<h2>Готово</h2><p class="md">Предложено задач: <strong>${r.suggested}</strong>. Открой доску проекта.</p>
+    ${r.raw?`<div class="result-box">${esc(r.raw)}</div>`:''}
+    <div class="m-actions"><button class="btn" onclick="closeModal();S.curBoard=${r.board_id};loadBoardMeta().then(()=>viewBoard($('#main')))">К доске</button></div>`;
+}
+
+/* ===================== ПРОЕКТЫ ===================== */
+async function viewProjects(m){
+  const ps=await api('/api/projects');S.projects=ps;$('#b-proj').textContent=ps.length;
+  m.innerHTML=`<div class="head"><h1>Проекты</h1><div class="spacer"></div>
+    <button class="btn ghost sm" onclick="syncAllProjects()">↻ Синхр. все</button>
+    <button class="btn" onclick="openNewProject()">+ Проект</button>
+    <div class="toggle"><button id="sm-text" class="on">текст</button><button id="sm-vec">смысл</button></div>
+    <div class="search"><span class="si">⌕</span><input id="gs" placeholder="поиск по памяти…"></div></div>
+    <div class="grid" id="pg">${ps.map(p=>`<div class="card" data-slug="${p.slug}">
+      <h3>${esc(p.name)}</h3>
+      ${p.git_remote?`<div class="muted" style="font-size:12px;margin:-4px 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.git_remote)}">⎇ ${esc(gitRepoName(p.git_remote))}${p.git_branch?' · '+esc(p.git_branch):''}</div>`:''}
+      <div class="meta"><b>${p.memory_count}</b> памяток
+      ${p.todo_count?`<span class="pill todo">${p.todo_count} TODO</span>`:''}
+      <span class="spacer"></span><span class="muted">${ago(p.last_activity)}</span></div></div>`).join('')}</div>`;
+  let mode='text';
+  $('#sm-text').onclick=()=>{mode='text';$('#sm-text').classList.add('on');$('#sm-vec').classList.remove('on');};
+  $('#sm-vec').onclick=()=>{mode='vector';$('#sm-vec').classList.add('on');$('#sm-text').classList.remove('on');};
+  $$('#pg .card').forEach(c=>c.onclick=()=>openProject(c.dataset.slug));
+  let t;$('#gs').oninput=e=>{clearTimeout(t);t=setTimeout(()=>doSearch(e.target.value,mode),280);};
+}
+async function doSearch(q,mode){
+  if(q.trim().length<2){viewProjects($('#main'));return;}
+  const hits=await api(`/api/search?mode=${mode}&q=`+encodeURIComponent(q));const g=$('#pg');
+  g.innerHTML=hits.length?hits.map(h=>`<div class="row" data-slug="${h.slug||''}" data-file="${h.file||h.ref||''}">
+    <div class="rt"><span class="rtitle">${esc(h.name||h.title)}</span>
+      ${h.project?`<span class="pill project">${esc(h.project)}</span>`:''}
+      ${h.score!=null?`<span class="pill memory">${(h.score*100).toFixed(0)}%</span>`:''}</div>
+    <div class="rdesc">…${esc(h.snippet||'')}…</div></div>`).join(''):'<div class="empty">Ничего не найдено</div>';
+  g.style.display='block';
+  $$('#pg .row').forEach(r=>r.onclick=()=>{if(r.dataset.slug)openProject(r.dataset.slug);});
+}
+async function openProject(slug,focus){
+  const items=await api('/api/memory/'+slug);const proj=S.projects.find(p=>p.slug===slug);
+  const gitLine=proj&&proj.git_remote?`<div class="muted" style="font-size:13px;margin:-6px 0 10px">⎇ <a href="${esc(proj.git_remote)}" target="_blank" rel="noopener" style="color:inherit">${esc(proj.git_remote)}</a>${proj.git_branch?` · ветка <code>${esc(proj.git_branch)}</code>`:''}</div>`:'';
+  $('#main').innerHTML=`<span class="back" onclick="render()">← Проекты</span>
+    <div class="head"><h1>${esc(proj?proj.name:slug)}</h1><div class="spacer"></div>
+      <button id="dc-toggle" class="btn ghost sm" title="Проверять, что задача реально выкачена: при rc=0 и зелёных тестах, но без нового коммита, карточка уходит в «не выкачено» (🚧), а не в «Готово». Клик — вкл/выкл." onclick="toggleDeployCheck('${slug}')">🚧 …</button>
+      ${proj&&proj.description!==undefined?`<button class="btn ghost sm" onclick="rescanProject('${slug}')">↻ Пересканировать</button>`:''}
+      <button class="btn ghost sm" onclick="quickAnalyze('${slug}')">✦ Анализ</button>
+      <button class="btn" onclick="quickTask('${slug}')">+ Задача</button></div>
+    ${gitLine}
+    <div>${items.map(it=>`<div class="row" data-file="${it.file}">
+      <div class="rt"><span class="rtitle">${esc(it.name)}</span><span class="pill ${it.type}">${it.type}</span>
+        ${it.has_todo?'<span class="pill todo">TODO</span>':''}</div>
+      <div class="rdesc">${esc(it.description)}</div><div class="rsrc">${it.file} · ${ago(it.mtime)}</div></div>`).join('')}</div>`;
+  $$('#main .row').forEach(r=>r.onclick=()=>{const it=items.find(x=>x.file===r.dataset.file);
+    showModal(`<h2>${esc(it.name)} <span class="pill ${it.type}">${it.type}</span>
+      <span class="spk" onclick="speakToggle(this,${JSON.stringify(it.body).replace(/"/g,'&quot;')})">🔈</span></h2>
+      <div class="md">${md(it.body)}</div>
+      <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Закрыть</button>
+      <button class="btn" onclick="closeModal();quickTask('${slug}','${esc(it.name)}')">⚡ Задача</button></div>`);});
+  refreshDeployCheck(slug);
+}
+async function syncAllProjects(){
+  toast('Синхронизирую все проекты…');
+  const r=await post('/api/projects/sync-all',{}).catch(e=>{toast('Ошибка: '+e.message,{type:'err'});return null;});
+  if(!r)return;
+  S.projects=await api('/api/projects');
+  const withGit=r.results.filter(x=>x.ok&&x.git_remote).length;
+  toast(`Обновлено ${r.synced}/${r.total}, git найден у ${withGit}`,{title:'Синхронизация',type:'ok'});
+  viewProjects($('#main'));
+}
+async function rescanProject(slug){
+  toast('Сканирую…');
+  const r=await post('/api/projects/'+slug+'/rescan',{}).catch(e=>{toast('Ошибка: '+e.message,{type:'err'});return null;});
+  if(!r)return;
+  S.projects=await api('/api/projects');
+  toast(r.git_remote?'Обновлено. Git: '+gitRepoName(r.git_remote):'Обновлено (git не найден)',{title:'Пересканировано',type:'ok'});
+  openProject(slug);
+}
+async function refreshDeployCheck(slug){
+  const b=$('#dc-toggle');if(!b)return;
+  const r=await api('/api/settings/deploy-check/'+slug).catch(()=>({enabled:false}));
+  b.dataset.on=r.enabled?'1':'';
+  b.classList.toggle('on',r.enabled);
+  b.textContent='🚧 Проверять выкатку'+(r.enabled?': вкл':': выкл');
+}
+async function toggleDeployCheck(slug){
+  const b=$('#dc-toggle');const next=b.dataset.on!=='1';
+  await post('/api/settings/deploy-check/'+slug,{enabled:next});
+  toast(next?'Проверка выкатки включена':'Проверка выкатки выключена');
+  refreshDeployCheck(slug);
+}
+// Баннер «прод отстаёт от origin» — отдельный фоновый аудит (запушено, но не задеплоено).
+// Показывается только при lag>0 / ошибке проверки. lag=0 и «нет команды» — баннера нет.
+function prodLagBanner(slug,r){
+  if(!slug||!r)return '';
+  if(r.error&&r.error!=='no_cmd'){
+    return `<div class="prod-banner err"><span class="pb-ico">⚠️</span>
+      <div><div class="pb-title">Не удалось проверить прод (${esc(slug)})</div>
+      <div class="pb-msg">Команда проверки прод-HEAD вернула ошибку: <code>${esc(String(r.error).slice(0,160))}</code></div></div>
+      <button class="btn ghost sm" onclick="refreshProdLag()">↻ Перепроверить</button></div>`;
+  }
+  if(r.ok&&(r.lag>0||r.lag===-1)){
+    const txt=r.lag===-1?'на неизвестном коммите (не из origin)':`отстаёт на ${r.lag} ${plural(r.lag,'коммит','коммита','коммитов')}`;
+    return `<div class="prod-banner"><span class="pb-ico">🚀</span>
+      <div><div class="pb-title">Прод ${txt} — задеплой!</div>
+      <div class="pb-msg">Код запушен в <code>origin/${esc(r.branch||'')}</code>, но на сервере его ещё нет. Изменения не у пользователей.</div>
+      <div class="pb-meta">prod <code>${esc((r.prod_head||'').slice(0,7))}</code> · origin <code>${esc((r.origin_head||'').slice(0,7))}</code></div></div>
+      <button class="btn ghost sm" onclick="refreshProdLag()">↻ Перепроверить</button></div>`;
+  }
+  return '';
+}
+async function refreshProdLag(){
+  toast('Проверяю прод…');
+  await post('/api/prod-lag/refresh',{}).catch(()=>{});
+  if(S.view==='board')viewBoard($('#main'));
+}
+async function quickTask(slug,hint){await loadBoardMeta();const p=S.projects.find(x=>x.slug===slug)||{name:slug,slug};
+  await post('/api/boards',{name:p.name,slug});await loadBoardMeta();
+  S.curBoard=S.boards.find(b=>b.slug===slug)?.id;$$('.nav-i').forEach(x=>x.classList.remove('active'));
+  $('.nav-i[data-view=board]').classList.add('active');S.view='board';await viewBoard($('#main'));openNewCard(hint);}
+async function quickAnalyze(slug){$$('.nav-i').forEach(x=>x.classList.remove('active'));
+  $('.nav-i[data-view=board]').classList.add('active');S.view='board';if(!S.projects.length)S.projects=await api('/api/projects');
+  await viewBoard($('#main'));openAnalyze();$('#an-slug').value=slug;}
+async function openNewProject(){
+  const folders=await api('/api/folders');
+  showModal(`<h2>Новый проект</h2>
+    <p class="md">Привяжи папку как проект: prof считает README и структуру в базу и создаст доску канбан.</p>
+    <div class="field"><label>Папка из ~</label><select id="np-path"><option value="">— или укажи путь ниже —</option>${folders.map(f=>`<option value="${esc(f.path)}">${esc(f.name)} — ${esc(f.path)}</option>`).join('')}</select></div>
+    <div class="field"><label>Свой путь</label><input id="np-custom" placeholder="напр. /home/nel/other/app"></div>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn" onclick="createProject()">Создать</button></div>`);
+}
+async function createProject(){
+  const path=($('#np-custom').value.trim())||$('#np-path').value;if(!path){toast('Укажи папку',{type:'err'});return;}
+  const r=await post('/api/projects',{path});
+  S.projects=await api('/api/projects');closeModal();
+  await loadBoardMeta();S.curBoard=r.board_id;
+  $$('.nav-i').forEach(x=>x.classList.remove('active'));
+  $('.nav-i[data-view=board]').classList.add('active');S.view='board';
+  await viewBoard($('#main'));
+  toast(`Проект «${esc(r.name)}» привязан, доска создана`,{title:'✦ Проект',type:'ok'});
+}
+
+/* ===================== TODO ===================== */
+async function viewTodos(m){const todos=await api('/api/todos');$('#b-todo').textContent=todos.length;
+  if(!S.projects.length)S.projects=await api('/api/projects');
+  const by={};todos.forEach(t=>{(by[t.project]=by[t.project]||[]).push(t);});
+  m.innerHTML=`<div class="head"><h1>TODO из памяти</h1><span class="sub">маркеры «Осталось / ЖДёт / НЕ начато»</span></div>
+    ${Object.entries(by).map(([p,it])=>`<div class="section-h">${esc(p)} <span class="note">${it.length}</span></div>
+      ${it.map(t=>`<div class="row" data-slug="${t.slug}" data-title="${esc(t.text.slice(0,70))}">
+        <div class="rdesc">${esc(t.text)}</div><div class="rsrc">${t.source}</div></div>`).join('')}`).join('')}`;
+  $$('#main .row').forEach(r=>r.onclick=()=>quickTask(r.dataset.slug,r.dataset.title));
+}
+
+/* ===================== СЕРВИСЫ / UPTIME ===================== */
+async function viewServices(m){
+  const list=await api('/api/services');$('#b-svc').textContent=list.filter(s=>s.last_status&&s.last_status<400).length||'·';
+  if(!S.projects.length)S.projects=await api('/api/projects');
+  m.innerHTML=`<div class="head"><h1>Сервисы</h1><span class="sub">uptime-пинг + аудит → задачи</span><div class="spacer"></div>
+    <button class="btn ghost sm" onclick="pingAll()">⟳ Пинг всех</button>
+    <button class="btn" onclick="openNewService()">+ Сервис</button></div>
+    ${list.length?list.map(s=>{const up=s.last_status&&s.last_status<400;const st=s.last_status?(up?'up':'down'):'unknown';
+      return `<div class="svc"><span class="dot ${st}"></span>
+        <div style="flex:1"><div class="sname">${esc(s.name)}</div><div class="surl">${esc(s.url)}</div></div>
+        <div class="muted" style="text-align:right">${s.last_status?`HTTP ${s.last_status} · ${s.last_ms}ms`:'не проверялся'}<br><span style="font-size:11px">${ago(s.last_checked)}</span></div>
+        <button class="btn ghost sm" onclick="pingOne(${s.id})">пинг</button>
+        ${!up&&s.last_status?`<button class="btn ghost sm" onclick="auditService('${s.slug||''}','${esc(s.name)}')">✦ фикс</button>`:''}
+        <button class="mini" title="Редактировать" onclick="openEditService(${s.id})">✎</button>
+        <button class="mini" onclick="delService(${s.id})">🗑</button></div>`;}).join('')
+    :'<div class="empty"><div class="big">◎</div>Нет сервисов. Добавь URL прода для мониторинга.</div>'}`;
+}
+function openNewService(){showModal(`<h2>Новый сервис</h2>
+  <div class="field"><label>Название</label><input id="ns-name" placeholder="bondai prod"></div>
+  <div class="field"><label>URL</label><input id="ns-url" placeholder="https://bondai.ru/"></div>
+  <div class="field"><label>Проект (для аудита)</label><select id="ns-slug"><option value="">—</option>${S.projects.map(p=>`<option value="${p.slug}">${esc(p.name)}</option>`).join('')}</select></div>
+  <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Отмена</button><button class="btn" onclick="addService()">Добавить</button></div>`);}
+async function addService(){await post('/api/services',{name:$('#ns-name').value,url:$('#ns-url').value,slug:$('#ns-slug').value||null});closeModal();viewServices($('#main'));}
+async function openEditService(id){
+  const list=await api('/api/services');const s=list.find(x=>x.id===id);if(!s)return;
+  showModal(`<h2>Редактировать сервис</h2>
+    <div class="field"><label>Название</label><input id="es-name" value="${esc(s.name)}"></div>
+    <div class="field"><label>URL</label><input id="es-url" value="${esc(s.url)}"></div>
+    <div class="field"><label>Проект (для аудита)</label><select id="es-slug"><option value="">—</option>${S.projects.map(p=>`<option value="${p.slug}" ${p.slug===s.slug?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+    <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Отмена</button><button class="btn" onclick="saveService(${id})">Сохранить</button></div>`);
+}
+async function saveService(id){
+  await api('/api/services/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:$('#es-name').value,url:$('#es-url').value,slug:$('#es-slug').value||null})});
+  closeModal();viewServices($('#main'));
+}
+async function pingAll(){await post('/api/services/ping');viewServices($('#main'));}
+async function pingOne(id){await post(`/api/services/${id}/ping`);viewServices($('#main'));}
+async function delService(id){await fetch('/api/services/'+id,auth({method:'DELETE'}));viewServices($('#main'));}
+async function auditService(slug,name){if(!slug){toast('У сервиса не задан проект',{title:'Нельзя проверить',type:'err'});return;}quickAnalyze(slug);}
+
+/* ===================== НАВЫКИ ===================== */
+async function viewSkills(m){const d=await api('/api/skills');
+  const mcpRow=s=>`<div class="svc">
+    <span class="dot ${s.status==='connected'?'up':(s.status==='needs_auth'?'unknown':'down')}"></span>
+    <div style="flex:1"><div class="sname">${esc(s.name)}</div>
+      <div class="surl">${esc(s.capabilities||s.target||'')}</div></div>
+    <span class="pill ${s.status==='connected'?'user':'memory'}">${s.status==='connected'?'connected':(s.status==='needs_auth'?'needs auth':'offline')}</span>
+    <span class="muted" style="font-size:12px">${esc(s.transport||'')}</span></div>`;
+  const hookRow=h=>`<div class="svc">
+    <span class="pill user" style="flex:0 0 auto">${esc(h.event)}</span>
+    <code style="flex:0 0 auto;color:var(--clay)">${esc(h.matcher)}</code>
+    <div style="flex:1;font-size:12px" class="muted">${esc(h.command)}</div></div>`;
+  const nameDesc=(name,desc,tools)=>`<div class="svc">
+    <div style="flex:1"><div class="sname">${esc(name)}</div>
+      <div class="surl">${esc(desc||'—')}</div>
+      ${tools?`<div class="muted" style="font-size:11px;margin-top:2px">tools: ${esc(tools)}</div>`:''}</div></div>`;
+  const intRow=i=>`<div class="svc">
+    <span class="dot ${i.available?'up':'down'}"></span>
+    <div style="flex:1"><div class="sname">${esc(i.name)}</div><div class="surl">${esc(i.note||'')}</div></div>
+    <span class="pill ${i.available?'user':'memory'}">${i.available?'✓ доступно':'нет'}</span></div>`;
+  const sec=(icon,title,n)=>`<div class="section-h">${icon} ${title} <span class="note">${n}</span></div>`;
+  m.innerHTML=`<div class="head"><h1>Навыки</h1><span class="sub">что подключено и умеет система</span></div>
+    ${sec('⬡','MCP-серверы',d.mcp.length)}
+    ${d.mcp.length?d.mcp.map(mcpRow).join(''):'<div class="empty">Нет MCP-серверов</div>'}
+    <p class="note" style="margin:8px 0 4px">Добавлять/удалять MCP — через <code>claude mcp add</code> в терминале; здесь отображается статус подключения.</p>
+    ${sec('⚙','Хуки',d.hooks.length)}
+    ${d.hooks.length?d.hooks.map(hookRow).join(''):'<div class="empty">Хуки не настроены</div>'}
+    ${sec('/','Slash-команды',d.commands.length)}
+    ${d.commands.length?d.commands.map(c=>nameDesc(c.name,c.description)).join(''):'<div class="empty">Нет команд в ~/.claude/commands</div>'}
+    ${sec('✦','Скилы',d.skills.length)}
+    ${d.skills.length?d.skills.map(s=>nameDesc(s.name,s.description)).join(''):'<div class="empty">Нет скилов</div>'}
+    ${sec('◈','Сабагенты',d.agents.length)}
+    ${d.agents.length?d.agents.map(a=>nameDesc(a.name,a.description,a.tools)).join(''):'<div class="empty">Нет сабагентов</div>'}
+    ${sec('⚒','Интеграции prof',d.integrations.length)}
+    ${d.integrations.map(intRow).join('')}`;
+}
+
+/* ===================== DAILY ===================== */
+async function viewDaily(m){const days=await api('/api/daily');
+  m.innerHTML=`<div class="head"><h1>Активность</h1></div>
+    ${days.map(d=>`<div class="row" data-d="${d.date}"><div class="rt"><span class="rtitle">${d.date}</span>
+      <span class="spacer"></span><span class="muted">${(d.size/1024).toFixed(1)} КБ</span></div></div>`).join('')}`;
+  $$('#main .row').forEach(r=>r.onclick=async()=>{const d=await api('/api/daily/'+r.dataset.d);
+    showModal(`<h2>${r.dataset.d}</h2><div class="md">${md(d.text)}</div>
+      <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Закрыть</button></div>`);});
+}
+
+/* ===================== СЕССИИ ===================== */
+async function viewSessions(m){
+  const f=S.sessFilter||'active';
+  const list=await api('/api/sessions?filter='+f);
+  const nActive=list.filter(s=>s.active).length;
+  $('#b-sess').textContent=nActive||'·';
+  m.innerHTML=`<div class="head"><h1>Сессии</h1><span class="sub">живые сессии Claude Code (терминал, IDE, prof) — обзор, не канбан</span>
+      <div class="spacer"></div><span class="muted">${nActive} активных</span></div>
+    <div class="board-bar">
+      <button class="board-tab ${f==='active'?'active':''}" onclick="setSessFilter('active')">● активные</button>
+      <button class="board-tab ${f==='all'?'active':''}" onclick="setSessFilter('all')">все</button>
+    </div>
+    ${list.length?`<table class="cost-table">
+      <thead><tr><th></th><th>Проект</th><th>Ветка</th><th>Активность</th><th title="вход / выход токены">↓ / ↑</th><th title="доля cache_read">cache</th><th>Сообщ.</th><th>≈ $</th></tr></thead>
+      <tbody>${list.map(s=>{
+        const totIn=(s.total_input||0)+(s.total_cache_read||0);
+        const cacheShare=totIn?Math.round(s.total_cache_read/totIn*100):0;
+        return `<tr title="${esc(s.cwd||'')}\n${s.session_id}">
+        <td><span class="sdot ${s.active?'on':''}" title="${s.active?'активна':'неактивна'}"></span></td>
+        <td>${esc(s.project)}</td>
+        <td class="muted">${s.git_branch?esc(s.git_branch):'—'}</td>
+        <td class="muted">${ago(s.last_activity)}</td>
+        <td>${tok(s.total_input)} / ${tok(s.total_output)}</td>
+        <td>${cacheShare}%</td>
+        <td>${s.msg_count}</td>
+        <td class="c-usd">$${(s.est_cost_usd||0).toFixed(s.est_cost_usd<0.01?4:2)}</td></tr>`;}).join('')}</tbody>
+    </table>`:`<div class="empty"><div class="big">◉</div>${f==='active'?'Нет активных сессий (нет правок в ~/.claude/projects за 5 мин).':'Сессий не найдено.'}</div>`}
+    <p class="note" style="margin-top:18px">💡 Видны ВСЕ сессии Claude Code, не только prof-задачи. ● зелёная — файл сессии писался &lt; 5 мин назад или агент ждёт ввода. Ветка у активных резолвится живьём (git), у остальных — из лога. $ — реальная работа (вход+выход), без раздутого cache_read.</p>`;
+  // снимок данных для анти-моргания: ререндерим только при реальном изменении
+  S._sessSnap=JSON.stringify(list);
+  // авто-обновление пока мы на этом экране (без моргания — только если изменилось)
+  if(S.view==='sessions'&&!S.poll)S.poll=setInterval(async()=>{
+    if(S.view!=='sessions'){clearInterval(S.poll);S.poll=null;return;}
+    const fresh=await api('/api/sessions?filter='+(S.sessFilter||'active'));
+    if(JSON.stringify(fresh)!==S._sessSnap)viewSessions($('#main'));
+  },5000);
+}
+function setSessFilter(f){S.sessFilter=f;viewSessions($('#main'));}
+
+/* ===================== РАСПИСАНИЕ ===================== */
+async function viewSchedule(m){
+  const d=await api('/api/schedule');
+  $('#b-sched').textContent=(d.scheduled.length+d.queued.length)||'·';
+  const w=d.windows||{};
+  const winRow=(lbl,obj)=>{if(!obj)return '';const util=obj.util||0;
+    const c=util>=90?'var(--red)':util>=70?'var(--amber)':'var(--green)';
+    return `<div class="su-row" style="margin:6px 0" title="${lbl}: ${util}% · сброс ${obj.left||'—'} (${fmtTs(obj.resets_at)})">
+      <span class="su-lbl">${lbl}</span>
+      <span class="su-bar"><span class="su-fill" style="width:${Math.min(util,100)}%;background:${c}"></span></span>
+      <span class="su-val">${util}%</span><span class="su-left">сброс ${obj.left||'—'}</span></div>`;};
+  m.innerHTML=`<div class="head"><h1>Расписание</h1>
+      <span class="sub">всё, что в prof работает по времени · v${d.version||''}</span>
+      <div class="spacer"></div>
+      <button class="btn ghost sm" onclick="viewSchedule($('#main'))">⟳ Обновить</button></div>
+
+    <div class="section-h">⏳ Запланированные задачи <span class="note">${d.scheduled.length}</span></div>
+    ${d.scheduled.length?`<table class="cost-table">
+      <thead><tr><th>Задача</th><th>Проект</th><th>Старт</th><th>Когда</th></tr></thead>
+      <tbody>${d.scheduled.map(c=>`<tr title="${esc(c.title)}">
+        <td>${esc(c.title)}</td><td class="muted">${esc(c.project)}</td>
+        <td class="muted">${fmtTs(c.scheduled_at)||'—'}</td>
+        <td>${until(c.scheduled_at)||'—'}</td></tr>`).join('')}</tbody></table>`
+    :'<div class="empty" style="padding:24px"><div class="big">⏳</div>Нет отложенных задач (status=scheduled).</div>'}
+
+    <div class="section-h">▦ В очереди <span class="note">${d.queued.length}</span></div>
+    ${d.queued.length?`<table class="cost-table">
+      <thead><tr><th>Задача</th><th>Проект</th><th>В очереди с</th></tr></thead>
+      <tbody>${d.queued.map(c=>`<tr title="${esc(c.title)}">
+        <td>${esc(c.title)}</td><td class="muted">${esc(c.project)}</td>
+        <td class="muted">${ago(c.created_at)} назад</td></tr>`).join('')}</tbody></table>`
+    :'<div class="empty" style="padding:24px"><div class="big">▦</div>Очередь пуста — все слоты WIP свободны.</div>'}
+
+    <div class="section-h">↻ Регулярные процессы <span class="note">${d.periodic.length}</span></div>
+    <table class="cost-table">
+      <thead><tr><th>Процесс</th><th>Интервал</th><th>Где</th><th>Посл. запуск</th><th>След.</th></tr></thead>
+      <tbody>${d.periodic.map(p=>`<tr title="${esc(p.where||'')}">
+        <td>${esc(p.name)}</td>
+        <td>${p.interval==null?'<span class="pill memory">по требованию</span>':ivl(p.interval)}</td>
+        <td class="muted">${esc(p.where||'')}</td>
+        <td class="muted">${p.last_run?ago(p.last_run)+' назад':'—'}</td>
+        <td class="muted">${p.next_run?until(p.next_run):'—'}</td></tr>`).join('')}</tbody></table>
+
+    <div class="section-h">⚡ Лимитные окна <span class="note">${w.available?'live':'нет данных'}</span></div>
+    ${w.available?`<div style="max-width:520px">
+      ${winRow('5h',w.five_hour)}${winRow('7d',w.seven_day)}
+      ${w.next_period?`<p class="note" style="margin-top:10px">Следующее 5h-окно откроется ${until(w.next_period)} <span class="muted">(${fmtTs(w.next_period)})</span> — к нему привязывается отложенный старт.</p>`:''}
+    </div>`:'<div class="empty" style="padding:24px"><div class="big">⚡</div>Лимиты недоступны (нет токена usage).</div>'}`;
+  // снимок для анти-моргания: ререндер только при изменении состава/окон
+  S._schedSnap=JSON.stringify(d);
+  // авто-обновление пока на этом экране (без моргания — только если изменилось)
+  if(S.view==='schedule'&&!S.poll)S.poll=setInterval(async()=>{
+    if(S.view!=='schedule'){clearInterval(S.poll);S.poll=null;return;}
+    const fresh=await api('/api/schedule');
+    if(JSON.stringify(fresh)!==S._schedSnap)viewSchedule($('#main'));
+  },15000);
+}
+
+/* ===================== KB ===================== */
+async function viewKb(m){const kb=await api('/api/kb');const cats={concepts:[],connections:[]};kb.forEach(k=>cats[k.category].push(k));
+  m.innerHTML=`<div class="head"><h1>Knowledge Base</h1></div>
+    <div class="section-h">Concepts <span class="note">${cats.concepts.length}</span></div>
+    <div class="grid">${cats.concepts.map(kbCard).join('')}</div>
+    <div class="section-h">Connections <span class="note">${cats.connections.length}</span></div>
+    <div class="grid">${cats.connections.map(kbCard).join('')}</div>`;
+  $$('#main .card[data-kb]').forEach(c=>c.onclick=async()=>{const d=await api(`/api/kb/${c.dataset.cat}/${c.dataset.kb}`);
+    showModal(`<h2>${esc(c.dataset.title)}</h2><div class="md">${md(d.text)}</div>
+      <div class="m-actions"><button class="btn ghost" onclick="closeModal()">Закрыть</button></div>`);});
+}
+function kbCard(k){return `<div class="card" data-kb="${k.file}" data-cat="${k.category}" data-title="${esc(k.title)}">
+  <h3>${esc(k.title)}</h3>${k.links.length?`<div class="kb-links">${k.links.slice(0,5).map(l=>`<span>${esc(l)}</span>`).join('')}</div>`:''}</div>`;}
+
+/* ===================== ЗАТРАТЫ ===================== */
+async function viewCost(m){
+  const tab=S.costTab||'quota';
+  const sub=tab==='tasks'?'токены и стоимость по выполненным задачам'
+    :tab==='quota'?'кто жрёт квоту 5h-окна: наш чат vs задачи-коворкинг'
+    :'весь расход Claude Code за период (терминал, IDE, prof)';
+  m.innerHTML=`<div class="head"><h1>Затраты</h1><span class="sub">${sub}</span></div>
+    <div class="board-bar">
+      <button class="board-tab ${tab==='quota'?'active':''}" onclick="setCostTab('quota')">⛁ Квота 5ч</button>
+      <button class="board-tab ${tab==='tasks'?'active':''}" onclick="setCostTab('tasks')">prof-задачи</button>
+      <button class="board-tab ${tab==='sessions'?'active':''}" onclick="setCostTab('sessions')">все сессии</button>
+    </div>
+    <div id="cost-body"></div>`;
+  if(tab==='quota')await renderCostQuota($('#cost-body'));
+  else if(tab==='sessions')await renderCostSessions($('#cost-body'));
+  else await renderCostTasks($('#cost-body'));
+}
+function setCostTab(t){S.costTab=t;viewCost($('#main'));}
+
+const ccCard=(label,val,sub)=>`<div class="cost-card"><div class="cc-label">${label}</div>
+  <div class="cc-val">${val}</div>${sub?`<div class="cc-sub">${sub}</div>`:''}</div>`;
+
+async function renderCostTasks(m){
+  const [d,cmb]=await Promise.all([api('/api/cards/cost'),api('/api/cost/combined?days=7')]);
+  const totalTok=(d.total_input||0)+(d.total_output||0);
+  const rows=cmb.by_project||[];
+  const usd=v=>'$'+(v||0).toFixed((v||0)<0.01?4:2);
+  m.innerHTML=`<div class="cost-grid">
+      ${ccCard('Всего потрачено','$'+(d.total_cost_usd||0).toFixed(2),`${d.tasks_with_cost} задач с учётом`)}
+      ${ccCard('Средняя задача','$'+(d.avg_cost_usd||0).toFixed(3),d.avg_duration_ms?`~${(d.avg_duration_ms/1000).toFixed(0)}с`:'')}
+      ${ccCard('Токенов всего',tok(totalTok),`↓${tok(d.total_input)} вход · ↑${tok(d.total_output)} выход`)}
+      ${ccCard('На проверки','$'+(d.total_review_cost_usd||0).toFixed(2),'агентные ревью')}
+      ${ccCard('Выполнено',d.completed,d.failed?`${d.failed} с ошибкой`:'')}
+    </div>
+    <div class="section-h">По проектам</div>
+    ${rows.length?`<table class="cost-table">
+      <thead><tr><th>Проект</th><th>Задач</th><th>Задачи $</th><th title="Стоимость агентных проверок (ревью)">Проверки $</th><th title="Ручная работа в Claude Code по проекту (терминал/IDE, не через prof) за 7 дней">В консоли $</th><th title="Токены консольных сессий (вход / выход)">В консоли токены</th><th>Всего по проекту $</th></tr></thead>
+      <tbody>${rows.map(p=>`<tr><td>${esc(p.project)}</td><td>${p.tasks||'—'}</td>
+        <td>${p.cost_usd?usd(p.cost_usd):'—'}</td>
+        <td style="color:#7c5fb0">${p.review_cost_usd?usd(p.review_cost_usd):'—'}</td>
+        <td style="color:#b07c5f">${p.console_cost_usd?usd(p.console_cost_usd):'—'}</td>
+        <td>${(p.console_input||p.console_output)?`${tok(p.console_input)} / ${tok(p.console_output)}`:'—'}</td>
+        <td class="c-usd">${usd(p.total_usd)}</td></tr>`).join('')}</tbody>
+    </table>
+    <p class="note" style="margin-top:10px">Консоль = ручная работа в Claude Code по этому проекту (не через prof). Считается из live-сессий ~/.claude/projects за 7 дней.</p>`:'<div class="empty"><div class="big">⛁</div>Пока нет задач с учётом токенов. Запусти задачу — после выполнения здесь появятся затраты.</div>'}
+    ${renderCardsByModel(d.by_model)}
+    <p class="note" style="margin-top:18px">💡 Оптимизация: основная экономия — в кэше (cache-read дешевле обычного входа в ~10×). Длинные prompt и частые мелкие задачи на одном проекте переиспользуют кэш. Дроби крупные задачи на одной доске — кэш проекта греется.</p>`;
+}
+
+// Разбивка prof-задач по модели (cards.model, авто-роутинг). Показываем, только
+// если есть задачи с реальной моделью — иначе колонка ещё не заполняется и секцию
+// пропускаем (карты до роутинга идут в 'unknown'). Opus подсвечен — дорогой по окну.
+function renderCardsByModel(bm){
+  if(!bm)return '';
+  const order=['opus','sonnet','haiku'];
+  const real=order.filter(t=>bm[t]&&bm[t].tasks>0);
+  if(!real.length)return '';  // только unknown → роутинг ещё не пишет model
+  const totCost=real.reduce((s,t)=>s+(bm[t].cost||0),0)||1;
+  const tierLbl={opus:'Opus',sonnet:'Sonnet',haiku:'Haiku'};
+  const unk=bm.unknown;
+  const cards=real.map(t=>{
+    const r=bm[t],share=Math.round((r.cost||0)/totCost*100),isOpus=t==='opus';
+    return `<div class="cost-card${isOpus?' warn':''}">
+      <div class="cc-label">${tierLbl[t]}${isOpus?' <span class="flag" title="Opus съедает 5h-окно подписки в ~5× быстрее Sonnet">⬆ дорогой по окну</span>':''}</div>
+      <div class="cc-val">$${(r.cost||0).toFixed((r.cost||0)<0.01?4:2)}</div>
+      <div class="cc-sub">${share}% · ${r.tasks} задач · ↓${tok(r.input)} ↑${tok(r.output)}</div></div>`;
+  }).join('');
+  return `<div class="section-h">Расход по моделям (задачи)</div>
+    <div class="cost-grid">${cards}</div>
+    <p class="note" style="margin-top:10px">💡 На какой модели гонялась каждая задача (авто-роутинг). Opus жжёт 5h-окно подписки в ~5× быстрее Sonnet — тяжёлый код стоит на Opus, ревью/анализ роутятся на Sonnet.${unk&&unk.tasks?` <span style="opacity:.7">${unk.tasks} задач без метки модели (запуски до роутинга).</span>`:''}</p>`;
+}
+
+// «Расход по моделям»: opus/sonnet/haiku за период. Подсветка Opus — он жжёт
+// 5h-окно подписки в ~5× быстрее Sonnet. Если данных по моделям нет — пусто.
+function renderByModel(bm,days){
+  if(!bm)return '';
+  const order=['opus','sonnet','haiku'];
+  const rows=order.map(t=>({tier:t,...(bm[t]||{cost:0,input:0,output:0,messages:0})})).filter(r=>r.messages>0);
+  if(!rows.length)return '';
+  const totCost=rows.reduce((s,r)=>s+(r.cost||0),0)||1;
+  const tierLbl={opus:'Opus',sonnet:'Sonnet',haiku:'Haiku'};
+  const cards=rows.map(r=>{
+    const share=Math.round((r.cost||0)/totCost*100);
+    const isOpus=r.tier==='opus';
+    return `<div class="cost-card${isOpus?' warn':''}">
+      <div class="cc-label">${tierLbl[r.tier]}${isOpus?' <span class="flag" title="Opus съедает 5h-окно подписки в ~5× быстрее Sonnet">⬆ дорогой по окну</span>':''}</div>
+      <div class="cc-val">$${(r.cost||0).toFixed((r.cost||0)<0.01?4:2)}</div>
+      <div class="cc-sub">${share}% расхода · ${r.messages} сообщ · ↓${tok(r.input)} ↑${tok(r.output)}</div></div>`;
+  }).join('');
+  return `<div class="section-h">Расход по моделям</div>
+    <div class="cost-grid">${cards}</div>
+    <p class="note" style="margin-top:10px">💡 На подписке Opus съедает 5h-окно в ~5× быстрее Sonnet — роутинг переносит ревью/анализ на Sonnet, оставляя Opus для сложного кода.</p>`;
+}
+
+// Дашборд «кто жрёт квоту 5h-окна»: интерактив (наш чат/терминал/IDE) vs
+// задачи-коворкинг (claude -p от prof). Метрика — ТОКЕНЫ (их ест лимит, в первую
+// очередь cache_read). Баннер-совет на /compact для раздутой интерактив-сессии.
+async function renderCostQuota(m){
+  const d=await api('/api/quota/breakdown?hours=5');
+  const t=d.totals||{}, w=d.window||{}, adv=d.advice;
+  const sess=d.sessions||[];
+  // короткий id сессии для таблицы
+  const sid=s=>(s||'').slice(0,8);
+  const kindLbl={interactive:'чат/консоль',task:'задача'};
+  // бар-доля интерактив/задачи
+  const ip=t.interactive_pct||0, tp=t.task_pct||0;
+  const banner=adv?`<div class="quota-banner">
+      <div class="qb-ico">🔴</div>
+      <div class="qb-body">
+        <div class="qb-title">Раздутая сессия жрёт квоту</div>
+        <div class="qb-msg">${esc(adv.message)}</div>
+        <div class="qb-meta">сессия <code>${sid(adv.session_id)}</code> · «${esc(adv.project)}» · пик контекста ${Math.round(adv.peak_ctx/1000)}K · ${tok(adv.tokens)} токенов за окно</div>
+      </div></div>`:
+    `<div class="quota-ok">✓ Раздутых интерактивных сессий нет — квота расходуется ровно.</div>`;
+  m.innerHTML=`${banner}
+    <div class="cost-grid">
+      ${ccCard('Токенов за 5ч',tok(t.tokens||0),`${t.sessions||0} сессий${w.util!=null?` · окно ${w.util}% выбрано`:''}`)}
+      ${ccCard('Интерактив (чат/консоль)',ip+'%',`${tok(t.interactive_tokens||0)} · ${t.interactive_sessions||0} сесс.`)}
+      ${ccCard('Задачи-коворкинг',tp+'%',`${tok(t.task_tokens||0)} · ${t.task_sessions||0} сесс.`)}
+      ${ccCard('Окно сбросится',w.left||'—',w.util!=null?`утилизация ${w.util}%`:'лимит недоступен')}
+    </div>
+    <div class="quota-split" title="Доля нагрузки на 5h-окно: интерактивные сессии vs задачи prof">
+      <div class="qs-bar">
+        <div class="qs-inter" style="width:${ip}%" title="Интерактив ${ip}%">${ip>=12?ip+'% чат/консоль':''}</div>
+        <div class="qs-task" style="width:${tp}%" title="Задачи ${tp}%">${tp>=12?tp+'% задачи':''}</div>
+      </div>
+    </div>
+    <div class="section-h">Сессии за 5ч-окно (по нагрузке на квоту)</div>
+    ${sess.length?`<table class="cost-table">
+      <thead><tr><th>Сессия</th><th>Тип</th><th>Проект</th><th>Модель</th>
+        <th title="всего токенов за окно — это ест квоту">Токены</th>
+        <th title="пик контекста = cache_read+create в одном ходу; большой → каждый ход дорогой">Пик ctx</th>
+        <th title="сообщений в окне">Сообщ.</th></tr></thead>
+      <tbody>${sess.map(s=>{
+        const isOpus=s.model==='opus';
+        return `<tr class="${s.bloated?'warn':''}">
+        <td><code>${sid(s.session_id)}</code>${s.bloated?'<span class="flag" title="Контекст раздут — сделай /compact в этой сессии">🔴 раздута</span>':''}</td>
+        <td><span class="qk qk-${s.kind}">${kindLbl[s.kind]||s.kind}</span></td>
+        <td>${esc(s.project)}</td>
+        <td>${s.model}${isOpus?' <span class="flag" title="Opus жжёт окно в ~5× быстрее Sonnet">⬆</span>':''}</td>
+        <td class="c-usd">${tok(s.tokens)}</td>
+        <td>${Math.round(s.peak_ctx/1000)}K</td>
+        <td>${s.messages}</td></tr>`;}).join('')}</tbody>
+    </table>`:'<div class="empty"><div class="big">⛁</div>Нет активных сессий за последние 5 часов.</div>'}
+    <p class="note" style="margin-top:18px">💡 Квоту 5h-окна ест в первую очередь <b>cache_read</b> — перечитывание контекста на каждом ходу. Длинная интерактивная сессия раздувает контекст (пик ctx) → каждый следующий ход дороже. Лекарство — <b>/compact</b> в раздутой сессии (prof не может сделать это за интерактивный чат — только подсказать). Задачи-коворкинг роутятся на Sonnet и обычно дают малую долю.</p>`;
+}
+
+async function renderCostSessions(m){
+  const d=await api('/api/cost/sessions?days=7');
+  const per=d.period||{}, days=d.period_days||7;
+  const tin=per.input||0, tout=per.output||0, tcr=per.cache_read||0;
+  // доля cache_read среди всего «входа» (вход + кэш-чтение): высокая = хорошо
+  const cacheShare=(tin+tcr)?Math.round(tcr/(tin+tcr)*100):0;
+  // подсветка аномалий: по проектам с заметным расходом — высокий output/сообщение
+  // или низкая доля cache_read относительно медианы → кандидат на оптимизацию промптов.
+  const projs=(d.by_project||[]).filter(p=>p.messages>0);
+  const sig=projs.filter(p=>p.cost>=0.5);  // только заметные проекты — иначе шум
+  const med=arr=>{if(!arr.length)return 0;const s=[...arr].sort((a,b)=>a-b);const i=s.length>>1;return s.length%2?s[i]:(s[i-1]+s[i])/2;};
+  const medOut=med(sig.map(p=>p.output/p.messages));
+  const flag=p=>{
+    if(p.cost<0.5)return null;
+    const outPer=p.output/p.messages, share=(p.input+p.cache_read)?p.cache_read/(p.input+p.cache_read):1;
+    if(medOut&&outPer>medOut*2)return `output/сообщ ${tok(Math.round(outPer))} — вдвое выше медианы, длинные ответы дороги (×5 от входа)`;
+    if(share<0.5)return `cache-hit ${Math.round(share*100)}% — низкий, контекст перечитывается без кэша`;
+    return null;
+  };
+  // by_day: {day:{cost,input,output,messages}} — разбивка по дню
+  const dayEntries=Object.entries(d.by_day||{});
+  const dayCost=v=>(v&&typeof v==='object')?(v.cost||0):(v||0);  // совместимость со старым {day:cost}
+  const maxDay=Math.max(0,...dayEntries.map(([,v])=>dayCost(v)))||1;
+  const periodCost=dayEntries.reduce((s,[,v])=>s+dayCost(v),0);
+  const bars=dayEntries.map(([day,v])=>{const c=dayCost(v);return `<div class="daybar" title="${day}: $${c.toFixed(2)}">
+      <div class="db-val">${c>=0.01?'$'+c.toFixed(c<1?2:0):''}</div>
+      <div class="db-fill" style="height:${Math.max(2,c/maxDay*100)}%"></div>
+      <div class="db-lbl">${day.slice(5)}</div></div>`;}).join('');
+  // таблица по дням: дата убыв., подсветка дней-максимумов
+  const dayRows=[...dayEntries].reverse().map(([day,v])=>{
+      const c=dayCost(v),isMax=c>=maxDay&&c>0;
+      const inp=(v&&v.input)||0,out=(v&&v.output)||0,msg=(v&&v.messages)||0;
+      const sh=periodCost?Math.round(c/periodCost*100):0;
+      return `<tr class="${isMax?'warn':''}"><td>${day}${isMax?'<span class="flag">⬆ пик</span>':''}</td>
+        <td>${msg}</td><td>${tok(inp)} / ${tok(out)}</td><td>${sh}%</td>
+        <td class="c-usd">$${c.toFixed(c<0.01?4:2)}</td></tr>`;}).join('');
+  const flagged=projs.filter(p=>flag(p)).length;
+  m.innerHTML=`<div class="cost-grid">
+      ${ccCard('Всего за '+days+' дн','$'+(per.cost_usd||0).toFixed(2),`полный API-экв ≈$${per.cost_full_usd||0}`)}
+      ${ccCard('Окно 5ч','$'+((d.window_5h||{}).cost_usd||0).toFixed(2),'текущий лимитный интервал')}
+      ${ccCard('Токенов',tok(tin+tout),`↓${tok(tin)} вход · ↑${tok(tout)} выход`)}
+      ${ccCard('Доля cache-read',cacheShare+'%',cacheShare>=70?'хорошо — кэш греется':'можно лучше')}
+      ${ccCard('Проектов',projs.length,flagged?`${flagged} с флагом ⚑`:'аномалий нет')}
+    </div>
+    <div class="section-h">Расход по дням</div>
+    ${dayEntries.length?`<div class="daybars">${bars}</div>
+    <table class="cost-table">
+      <thead><tr><th>Дата</th><th>Сообщ.</th><th title="вход / выход">↓ / ↑ токены</th><th title="доля от периода">доля</th><th>$ за день</th></tr></thead>
+      <tbody>${dayRows}</tbody></table>`:'<div class="empty">Нет данных за период</div>'}
+    ${renderByModel(d.by_model,days)}
+    <div class="section-h">По проектам</div>
+    ${projs.length?`<table class="cost-table">
+      <thead><tr><th>Проект</th><th>Сообщ.</th><th title="вход / выход">↓ / ↑ токены</th><th title="доля cache_read — выше лучше">cache</th><th>$ за период</th></tr></thead>
+      <tbody>${projs.map(p=>{const f=flag(p);const share=(p.input+p.cache_read)?Math.round(p.cache_read/(p.input+p.cache_read)*100):0;
+        return `<tr class="${f?'warn':''}"><td>${esc(p.project)}${f?`<span class="flag" title="${esc(f)}">⚑ оптимизировать</span>`:''}</td>
+        <td>${p.messages}</td>
+        <td>${tok(p.input)} / ${tok(p.output)}</td>
+        <td>${share}%</td>
+        <td class="c-usd">$${p.cost.toFixed(p.cost<0.01?4:2)}</td></tr>`;}).join('')}</tbody>
+    </table>`:'<div class="empty"><div class="big">⛁</div>Нет сессий за период.</div>'}
+    <p class="note" style="margin-top:18px">💡 Учитываются ВСЕ сессии Claude Code (~/.claude/projects): терминал, IDE, prof. Стоимость — вход+выход (реальная генерация), без раздутого cache_read. Флаг ⚑ — высокий output/сообщение или низкий cache-hit: кандидаты на оптимизацию промптов.</p>`;
+}
+
+/* ===================== GIT ===================== */
+async function viewGit(m){const log=await api('/api/git/log');
+  m.innerHTML=`<div class="head"><h1>Git / бэкап</h1><span class="sub">авто-коммит каждые 10 мин</span><div class="spacer"></div>
+    <button class="btn ghost sm" onclick="applyCode()" title="Подхватить свежий код на диске без полного рестарта (claude-задачи переживут)">⟳ Применить код</button>
+    <button class="btn ghost sm" onclick="restartProf()">↻ Перезапустить prof</button>
+    <button class="btn ghost sm" onclick="setRemote()">⎇ Remote</button>
+    <button class="btn" onclick="backupNow()">⬆ Бэкап сейчас</button></div>
+    <div class="field" style="max-width:520px"><label>Obsidian vault (для синка задач)</label>
+      <div style="display:flex;gap:8px"><input id="ov" placeholder="~/ObsidianVault/prof"><button class="btn ghost sm" onclick="saveVault()">сохранить</button>
+      <button class="btn green sm" onclick="syncObsidian()">синк</button></div></div>
+    <div class="field" style="max-width:520px"><label>Telegram-уведомления <span id="tgBadge" class="muted"></span></label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="tgTok" placeholder="bot token" style="flex:1 1 200px">
+      <input id="tgChat" placeholder="chat_id" style="flex:0 0 120px">
+      <button class="btn ghost sm" onclick="saveTg()">сохранить</button>
+      <button class="btn green sm" onclick="testTg()">Тест</button></div>
+      <div class="muted" style="font-size:12px;margin-top:4px">env PROF_TG_BOT_TOKEN/PROF_TG_CHAT_ID имеют приоритет</div></div>
+    <div class="section-h">История коммитов</div>
+    ${log.map(c=>`<div class="svc"><span class="dot up"></span>
+      <code style="flex:0 0 70px;color:var(--clay)">${c.hash}</code>
+      <div style="flex:1">${esc(c.subject)}</div><span class="muted">${c.ago} назад</span></div>`).join('')||'<div class="empty">Нет коммитов</div>'}`;
+  api('/api/obsidian/vault').then(d=>{if($('#ov'))$('#ov').value=d.vault;});
+  refreshTgBadge();
+}
+async function backupNow(){const r=await post('/api/git/backup');toast(r.committed?'Закоммичено'+(r.pushed?' и запушено':''):'Нет изменений',{title:'Git',type:'ok'});viewGit($('#main'));}
+async function setRemote(){const url=await showPrompt('GitHub remote URL (https://...git):',{title:'⎇ Remote',placeholder:'https://...git'});if(!url)return;
+  const r=await post('/api/git/remote',{url});toast(r.ok?'Remote добавлен':'Ошибка: '+r.error,{title:'Git remote',type:r.ok?'ok':'err'});}
+async function saveVault(){await post('/api/obsidian/vault',{path:$('#ov').value});toast('Сохранено',{title:'Obsidian',type:'ok'});}
+async function syncObsidian(){const r=await post('/api/obsidian/sync');toast(`Синк: ${r.synced_boards} досок → ${r.vault}`,{title:'Obsidian',type:'ok'});}
+function refreshTgBadge(){api('/api/settings/telegram').then(d=>{const b=$('#tgBadge');if(b)b.textContent=d.configured?'TG ✓':'TG ✗';});}
+async function saveTg(){await post('/api/settings/telegram',{token:$('#tgTok').value,chat_id:$('#tgChat').value});$('#tgTok').value='';toast('Сохранено',{title:'Telegram',type:'ok'});refreshTgBadge();}
+async function testTg(){const r=await api('/api/notify/test');toast(r.ok?'Отправлено — проверь Telegram':'Не отправлено: '+(r.detail||'ошибка'),{title:'Telegram',type:r.ok?'ok':'err'});}
+async function applyCode(){
+  const ok=await showConfirm('Подхватить свежий код с диска (uvicorn reload). Веб-воркер пересоздастся за ~1-2с, claude-задачи переживут. Применять лучше, когда нет активных задач.',
+    {title:'⟳ Применить код',okText:'Применить'});
+  if(!ok)return;
+  try{
+    const r=await post('/api/apply-code');
+    toast(`Код применён${r.running?` (активных задач: ${r.running} — reaper перезапустится)`:''}. Обнови страницу через пару секунд.`,
+      {title:'⟳ Reload',type:'ok'});
+  }catch(e){toast('Не удалось: '+e,{title:'Ошибка',type:'err'});}
+}
+async function restartProf(){
+  const chk=await api('/api/restart/check');
+  let force=false;
+  if(!chk.can_restart){
+    const list=chk.running.map(r=>'• '+esc(r.title)).join('<br>');
+    const ok=await showConfirm(`Сейчас выполняется ${chk.running.length} задач:<br>${list}<br><br>Перезапуск <b>ПРЕРВЁТ</b> их. Всё равно перезапустить?`,
+      {title:'⚠️ Активные задачи',okText:'Перезапустить',danger:true});
+    if(!ok)return;
+    force=true;
+  } else {
+    const ok=await showConfirm('Активных задач нет, бэкап сделается автоматически.',
+      {title:'↻ Перезапустить prof?',okText:'Перезапустить'});
+    if(!ok)return;
+  }
+  try{
+    const r=await post('/api/restart',{force});
+    showModal('<h2>↻ Перезапуск…</h2><p class="md">Сервис перезапускается'+(r.interrupted?` (прервано задач: ${r.interrupted})`:'')+'. Страница обновится через 4 секунды.</p>');
+    setTimeout(()=>location.reload(),4000);
+  }catch(e){toast('Не удалось перезапустить: '+e,{title:'Ошибка',type:'err'});}
+}
+
+/* ---- модалка ---- */
+function showModal(h,wide){$('#modal').classList.toggle('wide',!!wide);$('#modal').innerHTML='<button class="modal-x" title="Закрыть" onclick="closeModal()">×</button>'+h;$('#overlay').classList.add('show');hl($('#modal'));}
+function closeModal(){$('#overlay').classList.remove('show');S.openCardId=null;stopSpeak();}
+/* модалки закрываются только по кнопкам — клик по фону и Escape не закрывают,
+   чтобы мисклики/выделение текста не теряли введённое */
+
+/* ---- стилизованные диалоги (замена нативных confirm/alert/prompt) ----
+   Отдельный слой dlg-overlay, чтобы открываться поверх основной модалки. */
+function _closeDlg(){$('#dlg-overlay').classList.remove('show');$('#dlg-modal').innerHTML='';}
+/* ---- тосты (уведомления в правом нижнем углу) ---- */
+function toast(msg,{title='',type='info',timeout=6000}={}){
+  const c=$('#toasts');if(!c)return;
+  const ico={ok:'✓',err:'✕',info:'ℹ'}[type]||'ℹ';
+  const el=document.createElement('div');el.className='toast '+type;
+  el.innerHTML=`<span class="t-ico">${ico}</span><div class="t-body">${title?`<div class="t-title">${esc(title)}</div>`:''}<div class="t-msg">${msg}</div></div><span class="t-x">×</span>`;
+  const close=()=>{el.classList.add('out');setTimeout(()=>el.remove(),200);};
+  el.querySelector('.t-x').onclick=close;
+  c.appendChild(el);
+  if(timeout)setTimeout(close,timeout);
+}
+function showConfirm(message,{title='Подтверждение',okText='OK',cancelText='Отмена',danger=false}={}){
+  return new Promise(res=>{
+    $('#dlg-modal').innerHTML=`<h2>${esc(title)}</h2><div class="md">${message}</div>
+      <div class="m-actions"><button class="btn ghost" id="dlg-no">${esc(cancelText)}</button>
+      <button class="btn ${danger?'danger':''}" id="dlg-yes">${esc(okText)}</button></div>`;
+    $('#dlg-overlay').classList.add('show');
+    $('#dlg-yes').onclick=()=>{_closeDlg();res(true);};
+    $('#dlg-no').onclick=()=>{_closeDlg();res(false);};
+  });
+}
+function showAlert(message,{title='',okText='OK'}={}){
+  return new Promise(res=>{
+    $('#dlg-modal').innerHTML=`${title?`<h2>${esc(title)}</h2>`:''}<div class="md">${message}</div>
+      <div class="m-actions"><button class="btn" id="dlg-ok">${esc(okText)}</button></div>`;
+    $('#dlg-overlay').classList.add('show');
+    $('#dlg-ok').onclick=()=>{_closeDlg();res();};
+  });
+}
+function showPrompt(message,{title='Ввод',value='',placeholder='',okText='OK'}={}){
+  return new Promise(res=>{
+    $('#dlg-modal').innerHTML=`<h2>${esc(title)}</h2><div class="md" style="margin-bottom:10px">${message}</div>
+      <div class="field"><input id="dlg-input" value="${esc(value)}" placeholder="${esc(placeholder)}"></div>
+      <div class="m-actions"><button class="btn ghost" id="dlg-cancel">Отмена</button>
+      <button class="btn" id="dlg-okp">${esc(okText)}</button></div>`;
+    $('#dlg-overlay').classList.add('show');
+    const inp=$('#dlg-input');inp.focus();inp.select();
+    const ok=()=>{const v=inp.value;_closeDlg();res(v);};
+    $('#dlg-okp').onclick=ok;
+    inp.onkeydown=e=>{if(e.key==='Enter')ok();};
+    $('#dlg-cancel').onclick=()=>{_closeDlg();res(null);};
+  });
+}
+
+/* статус векторов */
+api('/api/vectors/status').then(d=>{const n=$('#vec-note');if(n){n.textContent=d.available?(d.count+' векторов'):'';
+  n.onclick=()=>{$$('.nav-i').forEach(x=>x.classList.remove('active'));$('.nav-i[data-view=projects]').classList.add('active');S.view='projects';render().then(()=>{const sv=$('#sm-vec');if(sv)sv.click();const gs=$('#gs');if(gs)gs.focus();});};}});
+render();
+updateGlobalBadge();
+refreshMenuCounts();
+renderSideUsage();
+setInterval(updateGlobalBadge,6000);
+setInterval(refreshMenuCounts,30000);
+setInterval(renderSideUsage,30000);
+</script>
+</body>
+</html>

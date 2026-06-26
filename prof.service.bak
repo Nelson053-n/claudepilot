@@ -1,0 +1,17 @@
+[Unit]
+Description=prof — локальный дашборд (проекты/память/задачи/коворкинг)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/nel/prof
+Environment=PROF_HOST=0.0.0.0
+ExecStart=/home/nel/prof/.venv/bin/python /home/nel/prof/app.py
+Restart=always
+RestartSec=3
+# headless-задачи (claude) запускаются как потомки — даём им жить дольше остановки сервиса
+KillMode=mixed
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target
