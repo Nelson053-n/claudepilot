@@ -4,6 +4,12 @@
 
 *Канбан-автопилот для агентов Claude Code — поставь задачу, подтверди её, и headless-агент `claude` сделает работу, пока Claudepilot следит за прогрессом, валидирует результат и считает бюджет токенов.*
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-agents-D97757?logo=anthropic&logoColor=white)](https://claude.com/claude-code)
+
 🇬🇧 [English](#english) · 🇷🇺 [Русский](#русский)
 
 ![Board](docs/screenshots/board.png)
