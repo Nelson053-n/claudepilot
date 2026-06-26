@@ -88,7 +88,9 @@ def notify_telegram(text: str, dedup_key: tuple | None = None) -> bool:
 
 # ====================== Anthropic usage (лимиты 5h/7d) ======================
 _USAGE_FILE = PROF / "runs" / ".usage_cache.json"  # переживает рестарт сервиса
-_USAGE_TTL = 300  # usage меняется медленно — дёргаем API не чаще раза в 5 мин
+_USAGE_TTL = 60  # дёргаем usage-API не чаще раза в минуту. Было 300с, но раздутая
+                 # задача успевала выжечь окно за время жизни кэша (инцидент: 5h-окно
+                 # сгорало раньше, чем кэш util обновлялся → авто-пауза не срабатывала).
 
 
 def _usage_load() -> dict:
@@ -194,24 +196,84 @@ _MODELS = {
     "task": "claude-sonnet-4-6",   # дефолт задач — Sonnet (было opus); экономит квоту
     "review": "claude-sonnet-4-6",
     "analyze": "claude-sonnet-4-6",
+    "route": "claude-haiku-4-5-20251001",  # дешёвый классификатор сложности задачи
 }
 OPUS = "claude-opus-4-8"
 
 # Маркеры в заголовке/задании, поднимающие задачу на Opus (явно сложная).
 _OPUS_MARKERS = ("[opus]", "[hard]", "[сложно]", "[сложная]", "[complex]")
 
+# Промпт классификатора сложности: дешёвый Haiku решает sonnet/opus за задачу.
+_ROUTE_PROMPT = """Ты — маршрутизатор сложности задач для оркестратора Claude Code.
+Реши, какая модель нужна исполнителю: SONNET (дешёвая, для рутины) или OPUS (дорогая, для сложного).
+
+OPUS — выбирай только если задача действительно требует сильной модели:
+- архитектурные изменения, проектирование подсистем;
+- рефакторинг, затрагивающий много файлов с неочевидными связями;
+- тонкая логика безопасности / конкурентности / финансовых расчётов;
+- многошаговые задачи с неочевидными зависимостями между шагами.
+
+SONNET — для всего остального (это большинство задач):
+- локальные правки в одном-двух файлах;
+- добавление тестов, CRUD, UI-твики;
+- понятные изолированные фиксы с явным критерием готовности.
+
+ЗАДАЧА:
+---
+{task}
+---
+
+Ответь СТРОГО двумя строками. Первая строка — метка:
+MODEL: SONNET
+или
+MODEL: OPUS
+Вторая строка — одна короткая фраза обоснования."""
+
+
+def _smart_router_enabled() -> bool:
+    """Тумблер умного авто-роутинга (settings smart_router: "0" отключает,
+    откатывая на старое поведение чисто по ручным _OPUS_MARKERS)."""
+    return db.get_setting("smart_router", "1") != "0"
+
+
+def _classify_model_for_card(card: dict) -> str | None:
+    """Дешёвый Haiku-классификатор: смотрит заголовок+задание и решает SONNET/OPUS.
+    Возвращает имя модели или None при любом сбое (таймаут/пустой/неразборный ответ/
+    claude недоступен) — тогда вызывающий падает на дефолт. Стоимость классификации
+    копится в card.review_cost_usd (как у ревью). НЕ должен ронять запуск карточки."""
+    try:
+        cwd = project_path(card.get("slug") or "")
+        task = ((card.get("title") or "") + "\n\n" + (card.get("prompt") or ""))[:2000]
+        prompt = _ROUTE_PROMPT.format(task=task)
+        res = run_agent_once(prompt, cwd, f"route_{card['id']}.out", timeout=60, kind="route")
+        rcost = (card.get("review_cost_usd") or 0) + (res.get("cost_usd") or 0)
+        if res.get("cost_usd"):
+            db.update_card(card["id"], review_cost_usd=round(rcost, 4))
+        m = re.search(r"MODEL:\s*(SONNET|OPUS)", res.get("text", "") or "", re.IGNORECASE)
+        if not m:
+            return None
+        return OPUS if m.group(1).upper() == "OPUS" else _MODELS["task"]
+    except Exception:
+        return None
+
 
 def _model_for_card(card: dict) -> str:
-    """Модель для запуска задачи. settings model:task имеет высший приоритет
-    (если задан — всегда он). Иначе: Opus при явном маркере сложности в title/
-    prompt, иначе дефолт (Sonnet). Так дорогой Opus тратится только там, где
-    действительно нужен, а не на каждой задаче."""
+    """Модель для запуска задачи. Приоритеты: (a) settings model:task override —
+    высший; (b) ручной маркер сложности (_OPUS_MARKERS) в title/prompt → Opus
+    (явная воля оператора важнее классификатора); (c) умный Haiku-классификатор
+    (settings smart_router, вкл по умолчанию); (d) дефолт Sonnet. Любой сбой
+    классификатора → дефолт (запуск не падает). Дорогой Opus тратится только там,
+    где действительно нужен."""
     override = db.get_setting("model:task")
     if override:
         return override
     text = ((card.get("title") or "") + " " + (card.get("prompt") or "")).lower()
     if any(m in text for m in _OPUS_MARKERS):
         return OPUS
+    if _smart_router_enabled():
+        picked = _classify_model_for_card(card)
+        if picked:
+            return picked
     return _MODELS["task"]
 
 
@@ -248,6 +310,30 @@ def _window_util_exceeded() -> bool:
     return util is not None and util > limit
 
 
+# Мягкий порог утилизации 5h-окна (%), выше которого параллелизм режем до 1: когда
+# окно уже под нагрузкой, несколько тяжёлых задач разом суммарно жгут cache_read и
+# выжигают остаток. Ниже жёсткого window_util_limit (там старт вовсе придерживается).
+# settings-ключ wip_throttle_util; 0 = выкл.
+WIP_THROTTLE_UTIL_DEFAULT = 60
+
+
+def _effective_wip_limit() -> int:
+    """WIP-лимит с учётом нагрузки окна: при util выше мягкого порога режем до 1,
+    чтобы тяжёлые задачи не шли пачкой и не выжигали окно суммарным cache_read.
+    Порог 0 или usage недоступен → обычный лимит."""
+    base = db.get_wip_limit()
+    try:
+        thr = int(float(db.get_setting("wip_throttle_util", WIP_THROTTLE_UTIL_DEFAULT)))
+    except (TypeError, ValueError):
+        thr = WIP_THROTTLE_UTIL_DEFAULT
+    if thr <= 0:
+        return base
+    util = (get_usage().get("five_hour") or {}).get("util")
+    if util is not None and util > thr:
+        return 1
+    return base
+
+
 # ---- авто-пауза раздувшихся задач (ночной инцидент #74: 159 turns / 18M
 # cache_read в одном прогоне выжгли 5h-окно и уронили соседние задачи в
 # session-limit). Идея: НЕ резать задачу (она не доделается), а если она вышла за
@@ -255,8 +341,8 @@ def _window_util_exceeded() -> bool:
 # --resume (start_card_continue) в следующем окне. Пороги выше нормы (медиана
 # задачи ~29 turns, cache_read почти всегда <5M) — ловят аномалию, не трогают
 # здоровые длинные задачи. settings: pause_turns / pause_cache_read_m (0 = выкл).
-PAUSE_TURNS_DEFAULT = 80
-PAUSE_CACHE_READ_M_DEFAULT = 8  # млн токенов cache_read за прогон
+PAUSE_TURNS_DEFAULT = 55
+PAUSE_CACHE_READ_M_DEFAULT = 5  # млн токенов cache_read за прогон
 
 
 def _pause_thresholds() -> tuple[int, int]:
@@ -627,7 +713,7 @@ def start_card(card: dict) -> None:
                        result=(f"⏳ В очереди: 5h-окно почти исчерпано "
                                f"(>{_window_util_limit()}%). Запустится, когда лимит сбросится."))
         return
-    limit = db.get_wip_limit()
+    limit = _effective_wip_limit()
     if count_running() >= limit:
         db.update_card(card["id"], status="queued", column="approved",
                        result=(f"⏳ В очереди: достигнут лимит параллельных задач "
@@ -1095,12 +1181,17 @@ def pause_card(card: dict, reason: str) -> None:
             f.unlink()
         except OSError:
             pass
-    note = (f"⏸️ Поставлена на паузу: задача раздулась ({reason}), а 5h-окно почти "
-            f"исчерпано — чтобы не уронить соседние задачи в session-limit. "
+    note = (f"⏸️ Поставлена на паузу: задача раздулась ({reason}) — чтобы не выжечь "
+            f"5h-окно и не уронить соседние задачи в session-limit. "
             f"Продолжится автоматически в следующем окне (--resume).")
     result = (parsed["text"].strip() + "\n\n" + note).strip() if parsed["text"] else note
+    # scheduled_at = начало следующего 5h-окна → resume_paused поднимет задачу не
+    # раньше реального сброса окна (гистерезис против пинг-понга: иначе задача с тем
+    # же раздутым контекстом мгновенно возобновится и снова перешагнёт порог). Если
+    # usage недоступен — None, тогда resume гейтится только по util (как раньше).
     db.update_card(cid, status="paused", pid=None, column="approved",
                    result=result, finished_at=db.now(),
+                   scheduled_at=next_period_start(),
                    cost_usd=parsed["cost_usd"], num_turns=parsed["num_turns"],
                    cache_read_tokens=parsed["cache_read_tokens"])
 
@@ -1644,13 +1735,16 @@ def refresh_running_cards() -> None:
         rc_f = RUNS / f"card_{cid}.rc"
         out_f = RUNS / f"card_{cid}.out"
         pid = card.get("pid")
-        # Авто-пауза раздувшихся задач (инцидент #74): если задача ещё БЕЖИТ
-        # (нет .rc), вышла за порог раздувания И 5h-окно почти исчерпано — ставим
-        # на паузу, пока она не выжгла окно и не уронила соседей в session-limit.
-        # Не резка: доделается через --resume в следующем окне (см. paused-ветку
-        # ниже + start_card_continue). Проверяем ТОЛЬКО при дефиците окна, чтобы
-        # здоровые длинные задачи в свободном окне не трогать.
-        if not rc_f.exists() and _window_util_exceeded():
+        # Авто-пауза раздувшихся задач (инциденты #74 и выжигание окна за ~5 мин):
+        # если задача ещё БЕЖИТ (нет .rc) и вышла за порог раздувания — ставим на
+        # паузу. Не резка: доделается через --resume в следующем окне (см. paused-
+        # ветку ниже + start_card_continue).
+        # БЕЗУСЛОВНО по порогу, НЕ дожидаясь _window_util_exceeded(): util берётся из
+        # usage-кэша (TTL), и раздутая задача успевала выжечь окно за время жизни
+        # кэша — к моменту, когда util покажет дефицит, окно уже сгорело. Пороги
+        # (pause_turns / pause_cache_read_m) сами по себе ловят аномалию: здоровая
+        # задача до них не дорастает.
+        if not rc_f.exists():
             bloat = _task_bloated(cid)
             if bloat:
                 pause_card(card, bloat["reason"])
@@ -1820,7 +1914,7 @@ def start_next_queued() -> int:
     задач одного проекта стартуют за проход; ИСКЛЮЧЕНИЕ — сам prof (worktree для
     него отключён → ведёт себя как project). None-slug (доски без проекта) лок не
     трогает."""
-    limit = db.get_wip_limit()
+    limit = _effective_wip_limit()
     cards = db.list_cards()
     queued = sorted((c for c in cards if c["status"] == "queued"),
                     key=lambda c: (c.get("created_at") or 0, c["id"]))
@@ -1885,12 +1979,23 @@ def resume_paused() -> int:
     Возвращает число возобновлённых задач."""
     if _window_util_exceeded():
         return 0  # окно ещё не отпустило — рано будить, иначе снова упрёмся
+    now = db.now()
     paused = sorted((c for c in db.list_cards() if c["status"] == "paused"),
                     key=lambda c: (c.get("created_at") or 0, c["id"]))
     started = 0
     for card in paused:
         if count_running() >= db.get_wip_limit():
             break
+        # гистерезис: задача, поставленная на паузу за раздувание, несёт
+        # scheduled_at = начало следующего окна. Не будим раньше — иначе тот же
+        # раздутый контекст мгновенно возобновится и снова перешагнёт порог
+        # (пинг-понг, жгущий токены). scheduled_at пуст (старая пауза/нет usage) →
+        # поднимаем как раньше, гейтом служит util выше.
+        sched = card.get("scheduled_at")
+        if sched and now < sched:
+            continue
+        # сбрасываем scheduled_at, чтобы не залип в scheduled-семантике после resume
+        db.update_card(card["id"], scheduled_at=None)
         # start_card_continue сам поставит в queued, если проект/WIP заняты
         start_card_continue(card)
         started += 1

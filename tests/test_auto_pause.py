@@ -3,9 +3,12 @@
 в одном прогоне выжгли 5h-окно и уронили соседей в session-limit).
 
 Логика: если бегущая задача вышла за порог раздувания (turns/cache_read из её
-.out) И 5h-окно почти исчерпано → pause_card (мягко глушит, status='paused',
-сохраняет контекст). Когда окно освободилось → resume_paused доделывает через
---resume (start_card_continue). Здоровые задачи и свободное окно не трогаем.
+.out) → pause_card (мягко глушит, status='paused', сохраняет контекст) —
+БЕЗУСЛОВНО, не дожидаясь дефицита окна (util из usage-кэша запаздывает на TTL, за
+который раздутая задача успевает выжечь окно). Порог сам ловит аномалию: здоровая
+задача до него не дорастает. Пауза пишет scheduled_at = начало следующего окна;
+resume_paused доделывает через --resume не раньше этого времени (гистерезис против
+пинг-понга).
 """
 import itertools
 import json
@@ -104,10 +107,13 @@ def test_reaper_pauses_bloated_when_window_full(tmp_env, monkeypatch):
     assert paused and paused[0][0] == c["id"]
 
 
-def test_reaper_keeps_bloated_when_window_free(tmp_env, monkeypatch):
+def test_reaper_pauses_bloated_even_when_window_free(tmp_env, monkeypatch):
     db.set_setting("pause_turns", "80")
     db.set_setting("window_util_limit", "85")
-    # окно свободно → даже раздутую задачу НЕ трогаем (она доработает)
+    # Окно свободно (util=40), но задача раздулась за порог → ВСЁ РАВНО пауза.
+    # Раньше ждали дефицита окна, но util берётся из usage-кэша (TTL) и раздутая
+    # задача успевала выжечь окно за время жизни кэша. Теперь порог сам ловит
+    # аномалию: здоровая задача до него не дорастает.
     monkeypatch.setattr(svc, "get_usage", lambda: {"five_hour": {"util": 40}})
     paused = []
     monkeypatch.setattr(svc, "pause_card", lambda c, r: paused.append(c["id"]))
@@ -115,6 +121,22 @@ def test_reaper_keeps_bloated_when_window_free(tmp_env, monkeypatch):
     c = _card()
     db.update_card(c["id"], status="running", pid=1)
     _write_out(tmp_env, c["id"], turns=120)
+
+    svc.refresh_running_cards()
+    assert paused == [c["id"]]
+
+
+def test_reaper_keeps_healthy_task_running(tmp_env, monkeypatch):
+    db.set_setting("pause_turns", "80")
+    db.set_setting("window_util_limit", "85")
+    # здоровая задача (под порогом) не трогается, даже если окно под нагрузкой
+    monkeypatch.setattr(svc, "get_usage", lambda: {"five_hour": {"util": 95}})
+    paused = []
+    monkeypatch.setattr(svc, "pause_card", lambda c, r: paused.append(c["id"]))
+
+    c = _card()
+    db.update_card(c["id"], status="running", pid=1)
+    _write_out(tmp_env, c["id"], turns=30)  # норма, до порога 80 далеко
 
     svc.refresh_running_cards()
     assert not paused
@@ -165,6 +187,81 @@ def test_resume_paused_waits_while_window_full(tmp_env, monkeypatch):
 
     assert svc.resume_paused() == 0  # окно ещё забито → не будим
     assert not resumed
+
+
+def test_resume_waits_for_scheduled_at(tmp_env, monkeypatch):
+    # гистерезис: paused-задача с scheduled_at в будущем НЕ возобновляется, даже
+    # если окно свободно — иначе тот же раздутый контекст мгновенно вернётся.
+    db.set_setting("window_util_limit", "85")
+    monkeypatch.setattr(svc, "get_usage", lambda: {"five_hour": {"util": 30}})
+    resumed = []
+    monkeypatch.setattr(svc, "start_card_continue",
+                        lambda c, **k: resumed.append(c["id"]))
+
+    c = _card()
+    db.update_card(c["id"], status="paused", result="x",
+                   scheduled_at=db.now() + 3600)  # окно сбросится через час
+
+    assert svc.resume_paused() == 0
+    assert not resumed
+
+
+def test_resume_after_scheduled_at_passed(tmp_env, monkeypatch):
+    # время сброса наступило → возобновляем и чистим scheduled_at
+    db.set_setting("window_util_limit", "85")
+    monkeypatch.setattr(svc, "get_usage", lambda: {"five_hour": {"util": 30}})
+    resumed = []
+    monkeypatch.setattr(svc, "start_card_continue",
+                        lambda c, **k: resumed.append(c["id"]))
+
+    c = _card()
+    db.update_card(c["id"], status="paused", result="x",
+                   scheduled_at=db.now() - 10)  # уже прошло
+
+    assert svc.resume_paused() == 1
+    assert resumed == [c["id"]]
+    assert db.get_card(c["id"])["scheduled_at"] is None
+
+
+def test_pause_card_stamps_next_period(tmp_env, monkeypatch):
+    # pause_card проставляет scheduled_at из next_period_start (для гистерезиса)
+    monkeypatch.setattr(svc, "next_period_start", lambda: 1_700_000_000.0)
+    c = _card()
+    db.update_card(c["id"], status="running", pid=None)
+    _write_out(tmp_env, c["id"], turns=5)
+
+    svc.pause_card(db.get_card(c["id"]), "120 turns (порог 80)")
+    assert db.get_card(c["id"])["scheduled_at"] == 1_700_000_000.0
+
+
+# ---- WIP-троттлинг при росте util ----------------------------------------
+
+def test_effective_wip_throttles_under_load(tmp_env, monkeypatch):
+    db.set_setting("wip_limit", "3")
+    db.set_setting("wip_throttle_util", "60")
+    # util выше мягкого порога → параллелизм режется до 1
+    monkeypatch.setattr(svc, "get_usage", lambda: {"five_hour": {"util": 70}})
+    assert svc._effective_wip_limit() == 1
+
+
+def test_effective_wip_full_when_window_calm(tmp_env, monkeypatch):
+    db.set_setting("wip_limit", "3")
+    db.set_setting("wip_throttle_util", "60")
+    monkeypatch.setattr(svc, "get_usage", lambda: {"five_hour": {"util": 40}})
+    assert svc._effective_wip_limit() == 3
+
+
+def test_effective_wip_throttle_disabled(tmp_env, monkeypatch):
+    db.set_setting("wip_limit", "3")
+    db.set_setting("wip_throttle_util", "0")  # выкл
+    monkeypatch.setattr(svc, "get_usage", lambda: {"five_hour": {"util": 95}})
+    assert svc._effective_wip_limit() == 3
+
+
+def test_effective_wip_no_usage(tmp_env, monkeypatch):
+    db.set_setting("wip_limit", "2")
+    monkeypatch.setattr(svc, "get_usage", lambda: {})  # usage недоступен
+    assert svc._effective_wip_limit() == 2
 
 
 def test_pause_card_sets_status_and_clears_files(tmp_env):
