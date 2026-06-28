@@ -30,6 +30,9 @@ def tmp_env(tmp_path, monkeypatch):
 
     monkeypatch.setattr(svc.subprocess, "Popen", FakeProc)
     monkeypatch.setattr(svc, "_window_util_exceeded", lambda: False)  # окно не блокирует старт
+    # выбор модели → дефолт без вызова Claude (гибрид-роутер иначе зовёт Haiku на
+    # «серых» задачах — реальный claude в тестах не нужен).
+    monkeypatch.setattr(svc, "_model_for_card", lambda card: svc._MODELS["task"])
     yield runs
 
 

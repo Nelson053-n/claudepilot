@@ -42,6 +42,9 @@ def tmp_env(tmp_path, monkeypatch):
     # окно НЕ переполнено — иначе start_card уводит всё в queued (зависело бы от
     # реальной 5h-квоты, делая тесты лимитов недетерминированными).
     monkeypatch.setattr(svc, "_window_util_exceeded", lambda: False)
+    # выбор модели → дефолт без вызова Claude: гибрид-роутер на «серых» задачах
+    # (дефолтные prompt'ы вроде "do it N") иначе сделал бы реальный Haiku-вызов.
+    monkeypatch.setattr(svc, "_model_for_card", lambda card: svc._MODELS["task"])
     yield runs
 
 

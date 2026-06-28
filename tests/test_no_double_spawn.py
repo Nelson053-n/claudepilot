@@ -63,7 +63,10 @@ def test_claim_spawn_from_paused(tmp_env):
 # ---- _spawn_card не плодит дубли -------------------------------------------
 
 def _mock_popen(monkeypatch, calls):
-    """Popen('bash'…) → фейк-процесс + счётчик; остальное (git и пр.) к реальному."""
+    """Popen('bash'…) → фейк-процесс + счётчик; остальное (git и пр.) к реальному.
+    Также фиксируем модель напрямую, чтобы умный роутер (_classify_model_for_card)
+    не делал свой синхронный claude-вызов внутри _spawn_card — он не предмет этих
+    тестов и иначе считался бы лишним 'bash'-спавном."""
     real = svc.subprocess.Popen
 
     class Fake:
@@ -76,6 +79,7 @@ def _mock_popen(monkeypatch, calls):
         return real(args, *a, **kw)
 
     monkeypatch.setattr(svc.subprocess, "Popen", fake)
+    monkeypatch.setattr(svc, "_model_for_card", lambda card: svc._MODELS["task"])
 
 
 def test_two_spawns_one_process(tmp_env, monkeypatch):

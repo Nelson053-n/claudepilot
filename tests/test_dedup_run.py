@@ -41,6 +41,9 @@ def tmp_env(tmp_path, monkeypatch):
 
     monkeypatch.setattr(svc.subprocess, "Popen", fake_popen)
     monkeypatch.setattr(svc, "_window_util_exceeded", lambda: False)  # окно не блокирует старт
+    # умный роутер (_classify_model_for_card) иначе сделал бы свой claude-вызов внутри
+    # _spawn_card и ложно увеличил счётчик спавнов; модель тут не предмет теста.
+    monkeypatch.setattr(svc, "_model_for_card", lambda card: svc._MODELS["task"])
     yield spawned
 
 
