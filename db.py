@@ -110,6 +110,7 @@ def init_db() -> None:
         ("head_at_start", "TEXT"),    # git HEAD проекта на старте задачи (для детекта «не выкачено»: появился ли коммит)
         ("review_verdict", "TEXT"),   # результат авто-ревью: DONE | REWORK + обоснование
         ("review_checked_at", "REAL"), # unix-время последнего авто-ревью
+        ("route_cost_usd", "REAL"),   # стоимость Haiku-классификатора модели (route), отдельно от ревью
     ]:
         try:
             c.execute(f"ALTER TABLE cards ADD COLUMN {col} {decl}")
@@ -261,6 +262,7 @@ CARD_FIELDS = {
     "session_dir", "validate_status", "validate_log", "test_baseline",
     "review_cost_usd", "scheduled_at", "model", "sched_continue", "worktree_path",
     "merge_branch", "head_at_start", "review_verdict", "review_checked_at",
+    "route_cost_usd",
 }
 
 def update_card(cid: int, **fields) -> dict:

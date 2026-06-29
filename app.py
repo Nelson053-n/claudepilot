@@ -765,6 +765,9 @@ def r_cards_cost():
         # суммарно по всем задачам: стоимость проверок (агентных ревью)
         "total_review_cost_usd": round(sum(c.get("review_cost_usd") or 0
                                            for c in db.list_cards()), 4),
+        # суммарно по всем задачам: стоимость роутинга модели (Haiku-классификатор)
+        "total_route_cost_usd": round(sum(c.get("route_cost_usd") or 0
+                                          for c in db.list_cards()), 4),
         "by_project": _cost_by_project(db.list_cards()),
         # средняя стоимость задачи по каждому slug — для точной оценки перед запуском
         "by_slug": _avg_by_slug(cards),
@@ -810,7 +813,10 @@ def _merge_cost_by_project(cards_proj: list, sess_proj: list) -> list:
     for p in cards_proj:
         r = row(p["project"])
         r["cost_usd"] += p.get("cost_usd") or 0
-        r["review_cost_usd"] += p.get("review_cost_usd") or 0
+        # route-стоимость (классификатор модели) суммируем в графу проверок —
+        # обе суть накладные расходы prof поверх самой задачи; отдельной колонки в
+        # combined-таблице нет, в итог total попадает корректно.
+        r["review_cost_usd"] += (p.get("review_cost_usd") or 0) + (p.get("route_cost_usd") or 0)
         r["tasks"] += p.get("tasks") or 0
 
     for p in sess_proj:
@@ -866,13 +872,14 @@ def _avg_by_slug(cards):
 def _cost_by_project(cards):
     agg = {}
     for c in cards:
-        # учитываем проект, если есть стоимость задачи ИЛИ стоимость проверок
-        if c.get("cost_usd") is None and not c.get("review_cost_usd"):
+        # учитываем проект, если есть стоимость задачи ИЛИ проверок ИЛИ роутинга
+        if c.get("cost_usd") is None and not c.get("review_cost_usd") and not c.get("route_cost_usd"):
             continue
         key = c.get("slug") or "—"
-        a = agg.setdefault(key, {"cost": 0.0, "review": 0.0, "input": 0, "output": 0, "tasks": 0})
+        a = agg.setdefault(key, {"cost": 0.0, "review": 0.0, "route": 0.0, "input": 0, "output": 0, "tasks": 0})
         a["cost"] += c.get("cost_usd") or 0
         a["review"] += c.get("review_cost_usd") or 0
+        a["route"] += c.get("route_cost_usd") or 0
         a["input"] += c.get("input_tokens") or 0
         a["output"] += c.get("output_tokens") or 0
         if c.get("cost_usd") is not None:
@@ -882,7 +889,9 @@ def _cost_by_project(cards):
         name = slug[len("-home-nel"):].lstrip("-") if slug.startswith("-home-nel") else slug
         out.append({"project": name or "—", "cost_usd": round(a["cost"], 4),
                     "review_cost_usd": round(a["review"], 4),
-                    "total_usd": round(a["cost"] + a["review"], 4),  # задачи + проверки
+                    "route_cost_usd": round(a["route"], 4),
+                    # итог = задачи + проверки + роутинг (классификатор модели)
+                    "total_usd": round(a["cost"] + a["review"] + a["route"], 4),
                     "input": a["input"], "output": a["output"], "tasks": a["tasks"]})
     out.sort(key=lambda x: x["total_usd"], reverse=True)
     return out

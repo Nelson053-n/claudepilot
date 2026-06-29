@@ -1114,7 +1114,7 @@ function bindStreams(cards){
       if(S.openCardId===+id){const mt=document.getElementById('modal-live-text');
         if(mt&&d.last_text!=null&&mt.textContent!==d.last_text)mt.textContent=d.last_text;}
     };
-    es.onerror=()=>{};  // EventSource сам реконнектит; финализацию подхватит 8с-поллер
+    es.onerror=()=>{console.debug('SSE-поток карты',id,'разорван — реконнект автоматический; финализацию подхватит 8с-поллер');};
   });
 }
 async function updateGlobalBadge(){
@@ -1241,6 +1241,11 @@ function bindKanban(){
     col.ondragleave=()=>col.classList.remove('dragover');
     col.ondrop=async e=>{e.preventDefault();col.classList.remove('dragover');
       if(dragId==null)return;const newCol=col.dataset.col;
+      // drop в approved запускает реальный claude -p (расходует токены) — спросим,
+      // чтобы случайный drag мышью не стартовал задачу незаметно.
+      if(newCol==='approved'&&!await showConfirm(
+          'Карточка будет подтверждена и запущена агентом (расходует токены).',
+          {title:'Запустить задачу?',okText:'Запустить'})){dragId=null;return;}
       await post(`/api/cards/${dragId}/move`,{column:newCol,position:0});
       viewBoard($('#main'));};
   });

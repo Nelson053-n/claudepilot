@@ -42,6 +42,10 @@ def tmp_env(tmp_path, monkeypatch):
     # окно НЕ переполнено — иначе start_card уводит всё в queued (зависело бы от
     # реальной 5h-квоты, делая тесты лимитов недетерминированными).
     monkeypatch.setattr(svc, "_window_util_exceeded", lambda: False)
+    # wip-throttle тоже читает РЕАЛЬНОЕ окно (_effective_wip_limit→get_usage): при
+    # util>60% режет лимит до 1 → тесты с 2 параллельными картами падали, когда
+    # реальное 5h-окно высоко. Глушим throttle, чтобы лимит был детерминирован.
+    db.set_setting("wip_throttle_util", "0")
     # выбор модели → дефолт без вызова Claude: гибрид-роутер на «серых» задачах
     # (дефолтные prompt'ы вроде "do it N") иначе сделал бы реальный Haiku-вызов.
     monkeypatch.setattr(svc, "_model_for_card", lambda card: svc._MODELS["task"])

@@ -89,9 +89,11 @@ def notify_telegram(text: str, dedup_key: tuple | None = None) -> bool:
 
 # ====================== Anthropic usage (лимиты 5h/7d) ======================
 _USAGE_FILE = PROF / "runs" / ".usage_cache.json"  # переживает рестарт сервиса
-_USAGE_TTL = 60  # дёргаем usage-API не чаще раза в минуту. Было 300с, но раздутая
-                 # задача успевала выжечь окно за время жизни кэша (инцидент: 5h-окно
-                 # сгорало раньше, чем кэш util обновлялся → авто-пауза не срабатывала).
+_USAGE_TTL = 15  # дёргаем usage-API не чаще раза в 15с. Было 300→60→15: раздутая
+                 # задача с параллельными суб-агентами выжигает миллионы cache_read за
+                 # минуту, и при TTL=60 авто-пауза опаздывала (5h-окно сгорало раньше,
+                 # чем кэш util обновлялся). 15с — компромисс: реже бьём API, но скачок
+                 # ловим вовремя. reaper-тик 3с всё равно перечитает свежий кэш.
 
 
 def _usage_load() -> dict:
@@ -265,7 +267,7 @@ def _classify_model_for_card(card: dict) -> str | None:
     (2) сигнал тривиальности (_SONNET_KEYWORDS) → None (дефолт Sonnet), без вызова;
     (3) серая зона → один Haiku-вызов (kind="route") с подсказкой эвристики в промпте.
     Возвращает имя модели или None (вызывающий падает на дефолт Sonnet). Любой сбой
-    Haiku → None. Стоимость route-вызова копится в card.review_cost_usd. НЕ роняет
+    Haiku → None. Стоимость route-вызова копится в card.route_cost_usd. НЕ роняет
     запуск карты. Большинство карт решаются на шагах (1)/(2) → без вызова и без скачка
     cache_creation; платный Haiku — лишь для неоднозначных."""
     try:
@@ -279,9 +281,9 @@ def _classify_model_for_card(card: dict) -> str | None:
         task = ((card.get("title") or "") + "\n\n" + (card.get("prompt") or ""))[:2000]
         prompt = _ROUTE_PROMPT.format(task=task, hint="SONNET (нет явных сигналов сложности)")
         res = run_agent_once(prompt, cwd, f"route_{card['id']}.out", timeout=60, kind="route")
-        rcost = (card.get("review_cost_usd") or 0) + (res.get("cost_usd") or 0)
+        rcost = (card.get("route_cost_usd") or 0) + (res.get("cost_usd") or 0)
         if res.get("cost_usd"):
-            db.update_card(card["id"], review_cost_usd=round(rcost, 4))
+            db.update_card(card["id"], route_cost_usd=round(rcost, 4))
         m = re.search(r"MODEL:\s*(SONNET|OPUS)", res.get("text", "") or "", re.IGNORECASE)
         if not m:
             return None
@@ -608,18 +610,29 @@ def _current_branch(repo: Path) -> str | None:
     return name if name and name != "HEAD" else None
 
 
-def create_worktree(slug: str, cid: int) -> tuple[Path, str] | None:
+def create_worktree(slug: str, cid: int, base_branch: str | None = None) -> tuple[Path, str] | None:
     """Создаёт git-worktree от HEAD основного репо проекта в отдельной папке с
     веткой prof-card-<cid>. Возвращает (путь_worktree, базовая_ветка) или None
     при ошибке. базовая_ветка — куда мерджить результат (текущая ветка репо на
-    момент старта). Идемпотентно: остатки прошлого прогона карточки подчищаются."""
+    момент старта). Идемпотентно: остатки прошлого прогона карточки подчищаются.
+
+    base_branch задаётся при RESUME paused-задачи (cards.merge_branch): если
+    worktree и ветка prof-card-<cid> ещё целы — ПЕРЕИСПОЛЬЗУЕМ их (коммиты paused-
+    сессии сохранены, продолжаем с того же места). Без этого пересоздание сносило
+    ветку (branch -D) и стартовало от свежего HEAD → потеря наработанных коммитов."""
     repo = project_path(slug)
     if repo == HOME or not (repo / ".git").exists():
         return None
-    base = _current_branch(repo) or "HEAD"
     _WORKTREES.mkdir(parents=True, exist_ok=True)
     wt = _WORKTREES / f"card_{cid}"
     branch = _wt_branch(cid)
+    # RESUME: ветка и worktree от прошлого (paused) прогона целы → переиспользуем,
+    # не теряя коммиты. base сохраняем из БД (merge_branch), а не из текущего HEAD.
+    if base_branch is not None:
+        has_branch = _git(["rev-parse", "--verify", branch], repo)
+        if wt.exists() and has_branch is not None and has_branch.returncode == 0:
+            return wt, base_branch
+    base = _current_branch(repo) or "HEAD"
     # подчистка остатков прошлого прогона той же карточки (иначе add упадёт)
     if wt.exists():
         _git(["worktree", "remove", "--force", str(wt)], repo)
@@ -850,7 +863,25 @@ _REVIEW_PROMPT = """Ты — ревьюер. Проверь, ВЫПОЛНЕНА 
 Ответь СТРОГО в таком формате (первая строка — вердикт):
 VERDICT: DONE   — если задача выполнена полностью и корректно
 VERDICT: REWORK — если НЕ выполнена / выполнена частично / есть проблемы
-Затем 2-4 строки обоснования: что проверил и почему такой вердикт."""
+Затем 2-4 строки обоснования: что проверил и почему такой вердикт.{readonly_note}"""
+
+# Задача read-only (анализ/сводка/проверка) — по природе НЕ меняет файлы и не
+# коммитит. Для неё «нет git-изменений / не закоммичено» — это НОРМА, а не провал.
+# Без этой подсказки ревьюер ставит REWORK → авто-рестарт «доделать» → бесконечный
+# цикл (карта моргает, жжёт окно). Маркеры в title/prompt.
+_READONLY_MARKERS = (
+    "[analysis]", "[анализ]", "[review]", "[ревью]", "[проверк",
+    "проанализир", "анализ ", "выведи свод", "сводк", "только напиши",
+    "ничего не меняй", "ничего не меня", "read-only", "не меняй файл",
+    "не коммить", "не вноси изменен",
+)
+
+
+def _is_readonly_task(card: dict) -> bool:
+    """Задача по природе не меняет файлы (анализ/сводка/проверка). Тогда отсутствие
+    git-дельты и «не закоммичено» — норма, не повод для REWORK/not_deployed."""
+    text = ((card.get("title") or "") + " " + (card.get("prompt") or "")).lower()
+    return any(m in text for m in _READONLY_MARKERS)
 
 
 def agent_review(card: dict) -> dict:
@@ -858,8 +889,14 @@ def agent_review(card: dict) -> dict:
     Возвращает {verdict: 'done'|'rework', text, cost_usd}. Агент читает реальные
     файлы/тесты, не доверяя только отчёту исполнителя."""
     cwd = project_path(card.get("slug") or "")
+    readonly_note = ("\n\nВАЖНО: это READ-ONLY задача (анализ/сводка/проверка) — она "
+                     "НЕ должна менять файлы или коммитить. Отсутствие git-изменений и "
+                     "«не закоммичено» здесь — ОЖИДАЕМО, это НЕ повод для REWORK. "
+                     "Оценивай только содержательность ответа исполнителя."
+                     if _is_readonly_task(card) else "")
     prompt = _REVIEW_PROMPT.format(task=(card.get("prompt") or "")[:3000],
-                                   report=(card.get("result") or "")[:4000])
+                                   report=(card.get("result") or "")[:4000],
+                                   readonly_note=readonly_note)
     res = run_agent_once(prompt, cwd, f"review_{card['id']}.out", timeout=600, kind="review")
     body = res.get("text", "") or ""
     # вердикт из строки с VERDICT:
@@ -890,7 +927,10 @@ def _spawn_card(card: dict) -> None:
         cwd = project_path(slug)
         worktree_path = merge_branch = None
         if _worktree_enabled(slug):
-            wt = create_worktree(slug, cid)
+            # resume paused-задачи: у карты уже есть merge_branch+worktree_path от
+            # прошлого прогона → переиспользуем worktree, не теряя коммиты.
+            resume_base = card.get("merge_branch") if card.get("worktree_path") else None
+            wt = create_worktree(slug, cid, base_branch=resume_base)
             if wt is not None:
                 cwd, merge_branch = wt[0], wt[1]
                 worktree_path = str(cwd)
@@ -925,6 +965,15 @@ def _spawn_card(card: dict) -> None:
         rc_f.unlink()
     if out_f.exists():
         out_f.unlink()
+    # resume: старый session_dir карты оставил маркер waiting/<old_sid>.json (хук
+    # prof_waiting.sh), который без .rc не подчищается → копится мусор и может ложно
+    # показывать «ждёт ввода». Чистим перед сменой sid.
+    old_sid = card.get("session_dir")
+    if old_sid:
+        try:
+            (RUNS / "waiting" / f"{old_sid}.json").unlink()
+        except OSError:
+            pass
     # фиксированный session_id → хук prof_waiting.sh пишет маркер waiting/<sid>.json,
     # а /api/cards/waiting матчит его на эту карточку напрямую (см. waiting_cards).
     sid = str(uuid.uuid4())
@@ -1468,13 +1517,18 @@ def _rc_mtime(rc_f: Path) -> float:
 _OUT_STALE = 4 * 60
 
 
-def _out_mtime(out_f: Path) -> float:
-    """mtime .out = момент последней записи процесса. now() при отсутствии файла
-    (out_silent=False → не финализируем по orphan, ждём .rc или появления .out)."""
+def _out_mtime(out_f: Path, fallback: float | None = None) -> float:
+    """mtime .out = момент последней записи процесса. При отсутствии файла —
+    fallback (started_at карты), а не now(): если процесс умер ДО создания .out
+    (краш на Popen/OOM), без fallback out_silent навсегда False и orphan-детект
+    НЕ финализирует карту — она вечно висит running без процесса. С fallback=
+    started_at тишина «.out так и не появился» отсчитывается от старта → после
+    GRACE карта корректно метится оборванной. fallback=None (нет started) → now()
+    (прежнее поведение: ждём .rc/появления .out)."""
     try:
         return out_f.stat().st_mtime
     except OSError:
-        return db.now()
+        return fallback if fallback else db.now()
 
 
 def _project_has_other_running(card: dict) -> bool:
@@ -1812,7 +1866,7 @@ def refresh_running_cards() -> None:
         #      а не просто «PID мелькнул мёртвым». Это и убирает ложные interrupted.
         GRACE = 15 * 60  # секунд — терпим долгие задачи (отложенный старт и пр.)
         started = card.get("started_at") or 0
-        out_silent = (db.now() - _out_mtime(out_f)) > _OUT_STALE
+        out_silent = (db.now() - _out_mtime(out_f, started)) > _OUT_STALE
         truly_orphaned = (pid_dead and not rc_exists
                           and started and (db.now() - started) > GRACE
                           and out_silent)
@@ -1860,7 +1914,12 @@ def refresh_running_cards() -> None:
                 # правильный исход — done/review, а не needs_input.
                 # Исключение: если агент сам задал вопрос (_needs_user_input) — уже
                 # обработано выше (до validate_card). Здесь продолжаем к not_done/done.
-                if v["ok"] and _deploy_not_done(card, _card_cwd(card)):
+                if v["ok"] and _is_readonly_task(card):
+                    # read-only (анализ/сводка/проверка) не меняет файлы по природе →
+                    # «нет коммита / не выкачено» НЕ провал. Сразу done, минуя
+                    # not_deployed-детекты (иначе ложный REWORK → авто-рестарт-цикл).
+                    status, col, validate_status = "done", "review", "passed"
+                elif v["ok"] and _deploy_not_done(card, _card_cwd(card)):
                     # Детерминированный детект: deploy_check включён, HEAD не сдвинулся
                     # или не запушен → результат точно не попал на прод/тест. Это
                     # объективный факт, не зависящий от текста отчёта.

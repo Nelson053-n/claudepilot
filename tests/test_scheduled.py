@@ -30,6 +30,9 @@ def tmp_env(tmp_path, monkeypatch):
 
     monkeypatch.setattr(svc.subprocess, "Popen", FakeProc)
     monkeypatch.setattr(svc, "_window_util_exceeded", lambda: False)  # окно не блокирует старт
+    # wip-throttle читает реальное 5h-окно (_effective_wip_limit→get_usage): при
+    # util>60% режет лимит до 1 → тесты слотов недетерминированны. Глушим throttle.
+    db.set_setting("wip_throttle_util", "0")
     # выбор модели → дефолт без вызова Claude (гибрид-роутер иначе зовёт Haiku на
     # «серых» задачах — реальный claude в тестах не нужен).
     monkeypatch.setattr(svc, "_model_for_card", lambda card: svc._MODELS["task"])
