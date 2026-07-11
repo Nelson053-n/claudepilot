@@ -164,6 +164,25 @@ def test_unfinished_card_untouched(tmp_env):
         proc.wait()
 
 
+def test_orphan_no_out_file(tmp_env):
+    """Карта running, pid мёртв, started_at > GRACE назад, .rc и .out ОТСУТСТВУЮТ.
+    _out_mtime возвращает started_at как fallback → out_silent=True → truly_orphaned=True
+    → карта помечается interrupted, НЕ остаётся running.
+    Проверяет фикс _out_mtime: без fallback=started_at mtime=now() → out_silent=False
+    → карта вечно висит running без процесса."""
+    runs = tmp_env
+    cid = _running_card(runs)
+    # .rc и .out не создаём — симулируем краш до первой записи вывода
+    db.update_card(cid, started_at=db.now() - (15 * 60 + 120))  # 17 мин назад > GRACE
+
+    svc.refresh_running_cards()
+
+    card = db.get_card(cid)
+    assert card["status"] != "running", "orphan без .out должен быть финализирован"
+    assert card["status"] in ("interrupted", "needs_input")
+    assert card["column"] == "approved"
+
+
 def test_non_running_cards_skipped(tmp_env):
     """Карточки не в статусе running игнорируются даже при наличии .rc."""
     runs = tmp_env

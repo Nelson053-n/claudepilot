@@ -21,9 +21,14 @@ COLUMN_TITLES = {
 
 
 def _conn() -> sqlite3.Connection:
-    c = sqlite3.connect(DB_PATH)
+    # timeout=30с (дефолт sqlite — 5с): под конкуренцией (reaper + git-autosave +
+    # валидатор карты, гоняющий pytest десятками параллельных _conn) захват write-
+    # lock для PRAGMA journal_mode=WAL за 5с не всегда успевал → «database is locked».
+    # Теперь ждём разблокировки, а не падаем сразу.
+    c = sqlite3.connect(DB_PATH, timeout=30)
     c.row_factory = sqlite3.Row
     c.execute("PRAGMA journal_mode=WAL")
+    c.execute("PRAGMA busy_timeout=30000")  # то же ожидание для последующих запросов на этом соединении
     c.execute("PRAGMA foreign_keys=ON")
     return c
 

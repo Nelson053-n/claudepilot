@@ -39,7 +39,7 @@ def _embed(text: str) -> list[float]:
 
 
 def _conn():
-    c = sqlite3.connect(VEC_DB)
+    c = sqlite3.connect(VEC_DB, timeout=30)  # ждать разблокировки, не падать сразу (см. db._conn)
     c.enable_load_extension(True)
     sqlite_vec.load(c)
     c.enable_load_extension(False)
