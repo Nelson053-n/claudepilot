@@ -182,3 +182,23 @@ def test_review_fields_persisted_in_db(tmp_env):
     updated = db.get_card(card["id"])
     assert updated["review_verdict"] == "DONE: проверено"
     assert abs(updated["review_checked_at"] - ts) < 1.0
+
+
+# ---- (e) детерминированный override REWORK→DONE для read-only «нет изменений» ----
+# (закрывает зацикливание ручной «доработки» read-only карты, как #103)
+
+def test_formal_no_changes_rework_overridden():
+    """REWORK сугубо про «нет изменений/коммитов» → форсим DONE (read-only норма)."""
+    assert svc._rework_is_only_no_changes(
+        "REWORK: задача read-only, файлы не изменялись, коммитов нет. Ответ дан.")
+
+
+def test_content_rework_not_overridden():
+    """REWORK по существу (неверно/ошибка) НЕ переопределяется, даже если есть 'коммитов нет'."""
+    assert not svc._rework_is_only_no_changes(
+        "REWORK: ответ неверный, посчитано неправильно, коммитов нет.")
+
+
+def test_no_changes_marker_absent():
+    """Нет маркера про изменения вовсе → не наш случай (не форсим)."""
+    assert not svc._rework_is_only_no_changes("REWORK: тема не раскрыта.")

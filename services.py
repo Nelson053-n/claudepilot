@@ -904,7 +904,40 @@ def agent_review(card: dict) -> dict:
     m = re.search(r"VERDICT:\s*(DONE|REWORK)", body, re.IGNORECASE)
     if m and m.group(1).upper() == "DONE":
         verdict = "done"
+    # ДЕТЕРМИНИРОВАННЫЙ override для read-only: ревьюер-модель нередко игнорит
+    # readonly_note и всё равно ставит REWORK по формальному «файлы не изменялись/
+    # коммитов нет» — а для анализа/сводки/хокку это НОРМА, не провал. Если вердикт
+    # REWORK обоснован ТОЛЬКО отсутствием изменений (а не содержанием) — форсим DONE.
+    # Иначе ручная «доработка» read-only карты зацикливается: REWORK→рестарт→REWORK
+    # (доска моргает, как #103). Промпт-подсказки мало — нужен жёсткий предохранитель.
+    if verdict == "rework" and _is_readonly_task(card) and _rework_is_only_no_changes(body):
+        verdict = "done"
+        body = ("[read-only: REWORK про «нет изменений/коммитов» переопределён на DONE — "
+                "для анализ/сводка-задач это ожидаемо]\n\n" + body)
     return {"verdict": verdict, "text": body[-3000:], "cost_usd": res.get("cost_usd")}
+
+
+# Фразы, которыми ревьюер обосновывает REWORK read-only задачи ФОРМАЛЬНО (нет
+# git-дельты), а не по существу. Если весь упрёк сводится к ним — это не провал.
+_NO_CHANGES_MARKERS = (
+    "файлы не изменя", "файлы не тронут", "не изменял файл", "изменений нет",
+    "нет изменений", "коммитов нет", "нет коммит", "не закоммич", "не выкач",
+    "git-изменени", "git изменени", "no changes", "not committed", "no commit",
+)
+
+
+def _rework_is_only_no_changes(body: str) -> bool:
+    """REWORK-обоснование сводится к «нет изменений/коммитов» (формальность для
+    read-only), а не к содержательной претензии? Эвристика: есть маркер про
+    отсутствие изменений И нет явных слов о неверном/неполном содержании."""
+    low = body.lower()
+    if not any(m in low for m in _NO_CHANGES_MARKERS):
+        return False
+    # содержательные претензии — их наличие означает, что REWORK по существу, не форсим
+    content_bad = ("неверн", "неправильн", "ошибка в", "ошибку", "не выполн",
+                   "не соответств", "не хватает", "неполн", "некорректн",
+                   "не по теме", "не та тема", "слог")  # 'слог' — про хокку-размер
+    return not any(w in low for w in content_bad)
 
 
 def _spawn_card(card: dict) -> None:
